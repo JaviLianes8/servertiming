@@ -8,4 +8,5 @@ All notable changes to this project are documented here. The format follows
 
 ## [0.1.0]
 
-- First release.
+- First release: `build` and `parse` for the Server-Timing header, a `Metric` value
+  type, and a `Timing` collector with a `measure` context manager.
