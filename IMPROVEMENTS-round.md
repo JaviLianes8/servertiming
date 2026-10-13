@@ -8,8 +8,8 @@ Progress:
 - [x] Safe builder: no header injection, escaping, extension parameters, precision
 - [x] Timing helpers: monotonic clock, context manager and decorator (sync and async), timers
 - [x] Command line checker
-- [ ] Contracts: WPT corpus (local), cited spec vectors, round trip, README examples, typing
-- [ ] Docs and packaging: README, CHANGELOG, metadata, installed-wheel e2e test
+- [x] Contracts: WPT corpus (local), cited spec vectors, round trip, README examples, typing
+- [x] Docs and packaging: README, CHANGELOG, metadata, installed-wheel e2e test
 - [ ] Gates: ruff format, ruff check, mypy --strict, pytest
 - [ ] Mutation run: removing guarded logic makes the suite fail
 - [ ] Independent review findings fixed with regression tests
