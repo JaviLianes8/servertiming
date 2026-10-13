@@ -1,90 +1,113 @@
-"""Parse a Server-Timing header value into metrics, tolerating malformed input."""
+"""Read Server-Timing field values the way browsers do, never raising on bad input."""
 
 from __future__ import annotations
 
-import math
+from collections.abc import Iterable
 
 from ._metric import Metric
+from ._number import parse_number
+from ._syntax import OWS, TCHARS
 
 
-def parse(header: str) -> list[Metric]:
-    """Read a header value into a list of metrics, skipping entries with no name.
+def field_list(value: str | Iterable[str]) -> list[str]:
+    """One field value or several (headers, then trailers) as a checked list."""
+    if isinstance(value, (bytes, bytearray)):
+        raise TypeError("field values must be str; decode header bytes as latin-1 first")
+    fields = [value] if isinstance(value, str) else list(value)
+    for field in fields:
+        if not isinstance(field, str):
+            raise TypeError(f"field values must be str, got {field!r}")
+    return fields
 
-    Unknown parameters are ignored and an unreadable duration becomes ``None`` rather
-    than raising, so a partly broken header still yields the metrics it can.
+
+def parse_lenient(fields: list[str]) -> list[Metric]:
+    """Tokenize the field values, skipping what the spec says to ignore.
+
+    Repeated fields are joined with ``", "`` first, as Fetch does before parsing.
     """
+    reader = _Reader(", ".join(fields))
     metrics: list[Metric] = []
-    for raw in _split(header, ","):
-        entry = raw.strip()
-        if not entry:
-            continue
-        parts = _split(entry, ";")
-        name = parts[0].strip()
+    while not reader.done():
+        reader.skip_ows()
+        name = reader.token()
         if not name:
+            reader.skip_to(",")
+            reader.advance()
             continue
-        dur: float | None = None
-        desc: str | None = None
-        for param in parts[1:]:
-            key, _, value = param.partition("=")
-            key = key.strip().lower()
-            value = value.strip()
-            if key == "dur":
-                dur = _to_float(value)
-            elif key == "desc":
-                desc = _unquote(value)
-        metrics.append(Metric(name=name, dur=dur, desc=desc))
+        params: dict[str, str] = {}
+        while True:
+            # Extraneous characters after a name or a value are ignored (spec section 2).
+            reader.skip_to(",;")
+            if reader.peek() != ";":
+                break
+            reader.advance()
+            reader.skip_ows()
+            key = reader.token().lower()
+            reader.skip_ows()
+            value = ""
+            if reader.peek() == "=":
+                reader.advance()
+                reader.skip_ows()
+                value = reader.quoted() if reader.peek() == '"' else reader.token()
+            # The first occurrence wins, even when it is empty or invalid.
+            if key and key not in params:
+                params[key] = value
+        reader.advance()
+        metrics.append(metric_from_params(name, params))
     return metrics
 
 
-def _split(text: str, separator: str) -> list[str]:
-    parts: list[str] = []
-    buffer: list[str] = []
-    in_quotes = False
-    escaped = False
-    for char in text:
-        if escaped:
-            buffer.append(char)
-            escaped = False
-        elif char == "\\" and in_quotes:
-            buffer.append(char)
-            escaped = True
-        elif char == '"':
-            in_quotes = not in_quotes
-            buffer.append(char)
-        elif char == separator and not in_quotes:
-            parts.append("".join(buffer))
-            buffer = []
-        else:
-            buffer.append(char)
-    parts.append("".join(buffer))
-    return parts
+def metric_from_params(name: str, params: dict[str, str]) -> Metric:
+    raw_dur = params.pop("dur", None)
+    desc = params.pop("desc", None)
+    dur = None if raw_dur is None else parse_number(raw_dur)
+    return Metric(name, dur, desc, tuple(params.items()))
 
 
-def _to_float(value: str) -> float | None:
-    try:
-        number = float(value)
-    except ValueError:
-        return None
-    if math.isnan(number) or math.isinf(number):
-        return None
-    return number
+class _Reader:
+    def __init__(self, text: str) -> None:
+        self.text = text
+        self.pos = 0
 
+    def done(self) -> bool:
+        return self.pos >= len(self.text)
 
-def _unquote(value: str) -> str | None:
-    if len(value) >= 2 and value[0] == '"' and value[-1] == '"':
-        return _unescape(value[1:-1])
-    return value or None
+    def peek(self) -> str:
+        return self.text[self.pos : self.pos + 1]
 
+    def advance(self) -> None:
+        self.pos += 1
 
-def _unescape(text: str) -> str:
-    result: list[str] = []
-    escaped = False
-    for char in text:
-        if escaped:
-            result.append(char)
-            escaped = False
-        elif char == "\\":
-            escaped = True
-        else:
-            result.append(char)
-    return "".join(result)
+    def skip_ows(self) -> None:
+        while self.peek() and self.peek() in OWS:
+            self.pos += 1
+
+    def token(self) -> str:
+        start = self.pos
+        while self.peek() and self.peek() in TCHARS:
+            self.pos += 1
+        return self.text[start : self.pos]
+
+    def skip_to(self, stops: str) -> None:
+        while self.peek() and self.peek() not in stops:
+            if self.peek() == '"':
+                self.quoted()
+            else:
+                self.pos += 1
+
+    def quoted(self) -> str:
+        """Read a quoted string; one that never closes reads as empty, as WPT expects."""
+        self.pos += 1
+        chars: list[str] = []
+        while not self.done():
+            char = self.text[self.pos]
+            self.pos += 1
+            if char == '"':
+                return "".join(chars)
+            if char == "\\":
+                if self.done():
+                    break
+                char = self.text[self.pos]
+                self.pos += 1
+            chars.append(char)
+        return ""

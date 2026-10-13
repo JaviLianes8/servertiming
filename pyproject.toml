@@ -4,24 +4,36 @@ build-backend = "hatchling.build"
 
 [project]
 name = "servertiming"
-version = "0.1.0"
-description = "Build and parse the HTTP Server-Timing header, with a tiny collector for recording metric durations"
+version = "0.2.0"
+description = "Build, parse and validate the HTTP Server-Timing header the way browsers read it, with timing helpers"
 readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
 license-files = ["LICENSE"]
 authors = [{ name = "Javier Lianes", email = "javier@lianes8studio.com" }]
-keywords = []
+keywords = ["server-timing", "http", "header", "performance", "timing", "metrics", "w3c"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Internet :: WWW/HTTP",
+    "Topic :: System :: Monitoring",
     "Typing :: Typed",
 ]
 dependencies = []
 
 [project.optional-dependencies]
 dev = ["ruff", "mypy", "pytest", "build", "twine"]
+
+[project.scripts]
+servertiming = "servertiming._cli:main"
 
 [project.urls]
 Homepage = "https://lianes8studio.com"
@@ -34,6 +46,10 @@ Funding = "https://buymeacoffee.com/jlianesglrs"
 [tool.hatch.build.targets.wheel]
 packages = ["src/servertiming"]
 
+[tool.hatch.build.targets.sdist]
+# Third-party test files are fetched locally and never shipped; only their manifest is.
+exclude = ["IMPROVEMENTS-round*.md", "tests/upstream/wpt-parsing"]
+
 [tool.ruff]
 line-length = 100
 target-version = "py310"
@@ -44,6 +60,7 @@ select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
 [tool.mypy]
 python_version = "3.10"
 strict = true
+mypy_path = "src"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
