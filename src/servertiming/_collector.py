@@ -7,6 +7,7 @@ import inspect
 import threading
 import time
 from collections.abc import Callable
+from contextvars import ContextVar
 from typing import Any, TypeVar, cast
 
 from ._build import build, render
@@ -74,13 +75,17 @@ class Measure:
         self._timing = timing
         self._name = name
         self._desc = desc
-        self._starts: list[float] = []
+        # A context variable keeps the start times apart when one Measure is entered from
+        # several threads or asyncio tasks at once; each sees only its own nesting.
+        self._starts: ContextVar[tuple[float, ...]] = ContextVar("starts", default=())
 
     def __enter__(self) -> None:
-        self._starts.append(self._timing._clock())
+        self._starts.set((*self._starts.get(), self._timing._clock()))
 
     def __exit__(self, *exc_info: object) -> None:
-        self._timing._finish(self._name, self._desc, self._starts.pop())
+        *outer, start = self._starts.get()
+        self._starts.set(tuple(outer))
+        self._timing._finish(self._name, self._desc, start)
 
     def __call__(self, func: F) -> F:
         timing, name, desc = self._timing, self._name, self._desc
@@ -116,6 +121,7 @@ class Timer:
         self._desc = desc
         self._start = start
         self._metric: Metric | None = None
+        self._lock = threading.Lock()
 
     @property
     def running(self) -> bool:
@@ -124,7 +130,8 @@ class Timer:
 
     def stop(self) -> Metric:
         """Record the elapsed milliseconds and return the metric; a timer stops once."""
-        if self._metric is not None:
-            raise RuntimeError(f"timer {self._name!r} is already stopped")
-        self._metric = self._timing._finish(self._name, self._desc, self._start)
-        return self._metric
+        with self._lock:
+            if self._metric is not None:
+                raise RuntimeError(f"timer {self._name!r} is already stopped")
+            self._metric = self._timing._finish(self._name, self._desc, self._start)
+            return self._metric

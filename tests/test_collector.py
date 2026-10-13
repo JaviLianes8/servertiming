@@ -86,17 +86,17 @@ def test_a_decorated_function_records_even_when_it_raises() -> None:
 
 
 def test_measure_decorates_a_coroutine_function_and_times_the_await() -> None:
-    timing = Timing()
+    now = [0.0]
+    timing = Timing(clock=lambda: now[0])
 
     @timing.measure("io")
     async def io() -> str:
-        await asyncio.sleep(0.02)
+        await asyncio.sleep(0)
+        now[0] = 0.5  # time passes while the coroutine is suspended
         return "done"
 
     assert asyncio.run(io()) == "done"
-    (metric,) = timing.metrics
-    assert metric.dur is not None
-    assert metric.dur >= 15.0
+    assert timing.metrics == [Metric("io", dur=500.0)]
 
 
 def test_a_decorated_coroutine_records_even_when_it_raises() -> None:

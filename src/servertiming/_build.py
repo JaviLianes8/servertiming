@@ -25,6 +25,8 @@ def build(metrics: Iterable[Metric], *, precision: int | None = None) -> str:
         isinstance(precision, bool) or not isinstance(precision, int) or precision < 0
     ):
         raise ServerTimingError(f"precision must be a non-negative int, got {precision!r}")
+    if isinstance(metrics, Metric):
+        raise ServerTimingError("build takes an iterable of metrics; wrap one metric in a list")
     return ", ".join(render(metric, precision) for metric in metrics)
 
 

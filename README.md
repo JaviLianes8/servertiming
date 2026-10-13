@@ -31,9 +31,12 @@ print(header)
 # db;dur=53;desc=primary, cache;dur=0.75;desc="Cache Read", cdn;hit=1
 ```
 
-The builder never writes a header that could split the response or that a client cannot
-read. A name must be a token, and a description holding CR, LF or another control
-character raises `ServerTimingError` (a `ValueError`):
+The builder never writes a header that could split the response. A name must be a token,
+and a description holding CR, LF or another control character raises `ServerTimingError`
+(a `ValueError`). Characters U+0080 to U+00FF are allowed inside quotes, as RFC 9110
+permits, and reach the client correctly only when your framework encodes headers as
+ISO-8859-1 (WSGI and ASGI do); keep descriptions to ASCII if you are unsure. Parameter
+names are case-insensitive and are stored and written in lower case:
 
 ```python
 from servertiming import Metric, ServerTimingError, build
@@ -47,8 +50,9 @@ print(build([Metric("db", dur=12.3456)], precision=1))
 # db;dur=12.3
 ```
 
-Parse a header value the way browsers do. Nothing raises: the parser keeps every metric
-it can and skips what the spec says to ignore. `dur` and `desc` are `None` when absent;
+Parse a header value the way browsers do. Malformed text never raises (only a value that
+is not a `str` does): the parser keeps every metric it can and skips what the spec says
+to ignore. `dur` and `desc` are `None` when absent;
 `duration` and `description` give the values a browser shows (`0` and `""`):
 
 ```python
@@ -73,8 +77,9 @@ print([m.name for m in parse(fields)])
 ```
 
 Check a header before sending it with `strict=True`. Each field must follow the grammar
-exactly, a parameter may appear only once, and `dur` must be a number. The error carries
-the field index and the position of the first offending character:
+exactly with the sender rules: no empty list elements (`a,,b`), a parameter only once,
+and `dur` a valid number. The error carries the field index and the position of the
+first offending character:
 
 ```python
 from servertiming import ServerTimingError, parse
@@ -124,8 +129,10 @@ not when the response goes out. Recording is safe from several threads.
 ## Command line
 
 `servertiming` shows the metrics in one or more values and exits with 1 when a value
-breaks the grammar (2 when there is no input). With no arguments it reads stdin, and when
-given response headers it uses only the `Server-Timing` lines:
+breaks the grammar (2 when there is no value). With no arguments it reads stdin, one value
+per line. When stdin holds response headers it uses only the `Server-Timing` fields
+(folded continuation lines included) and ignores the rest, so a response without the
+header exits with 2:
 
 ```
 $ curl -sI https://example.com/ | servertiming
@@ -141,7 +148,7 @@ $ servertiming --json 'db;desc=d1 d2'
 | Name | What it does |
 | --- | --- |
 | `build(metrics, *, precision=None)` | Serialize metrics into one header value, refusing unsafe input. |
-| `parse(value, *, strict=False)` | Read one field value or several (headers then trailers) into metrics. |
+| `parse(header, *, strict=False)` | Read one field value or several (headers then trailers) into metrics. |
 | `Metric(name, dur=None, desc=None, params=())` | One metric. `duration`, `description`, `param(name)`, `str()`. |
 | `Timing(clock=time.perf_counter)` | Collector: `add`, `measure`, `start`, `metrics`, `header(precision=None)`. |
 | `Measure` | Returned by `Timing.measure`: a context manager and a decorator. |
@@ -154,7 +161,8 @@ $ servertiming --json 'db;desc=d1 d2'
   first occurrence of a parameter wins, characters after a name or a value up to the next
   `;` or `,` are ignored, `dur` and `desc` with their defaults.
 - [RFC 9110](https://www.rfc-editor.org/rfc/rfc9110) 5.6: tokens, quoted strings, optional
-  whitespace, and the list rule (empty elements are accepted when parsing).
+  whitespace, and the list rule (the lenient parser skips empty elements as a recipient
+  must; strict mode rejects them as a sender must not write them).
 - [HTML](https://html.spec.whatwg.org/multipage/common-microsyntaxes.html#rules-for-parsing-floating-point-number-values):
   `dur` is read with the rules for parsing floating-point numbers, so `12ms` reads as 12,
   `+5` as 5 and `inf` as no duration. Strict mode asks for a valid floating-point number.

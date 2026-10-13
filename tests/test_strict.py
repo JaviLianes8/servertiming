@@ -16,7 +16,7 @@ VALID = [
     ('cache;desc="Cache Read";dur=23.2', [Metric("cache", 23.2, "Cache Read")]),
     ("db ; dur = 1 ;\tdesc = x", [Metric("db", 1.0, "x")]),
     ("  db  ", [Metric("db")]),
-    ("a , ,b,", [Metric("a"), Metric("b")]),
+    ("a , b,\tc", [Metric("a"), Metric("b"), Metric("c")]),
     ('db;dur="1.5"', [Metric("db", 1.5)]),
     ("db;dur=-1.5e+3", [Metric("db", -1500.0)]),
     ("db;dur=.5", [Metric("db", 0.5)]),
@@ -56,6 +56,12 @@ INVALID = [
     ("db;dur=+1", 7, "dur is not a valid floating-point number"),
     ("db;dur=1e999", 7, "dur is not a valid floating-point number"),
     ("db\r\n", 2, "expected ',' or ';'"),
+    # RFC 9110 5.6.1.1: a sender must not generate empty list elements.
+    (",", 0, "empty list element"),
+    ("a,,b", 2, "empty list element"),
+    ("a , ,b", 4, "empty list element"),
+    ("a, ", 3, "empty list element"),
+    (" ,a", 1, "empty list element"),
 ]
 
 

@@ -21,11 +21,14 @@ All notable changes to this project are documented here. The format follows
   holding CR, LF or another character no HTTP field can carry, closing a header injection.
 - `Timing` checks names and descriptions when a metric is recorded, not when the header
   is rendered.
+- `Metric` stores parameter names in lower case and an `int` duration as a `float`, so a
+  metric equals what `parse` reads back from its serialization.
 
 ### Added
 
-- `parse(value, strict=True)` checks values against the grammar and raises
-  `ServerTimingError` with `field` and `position`.
+- `parse(header, strict=True)` checks values against the grammar with the sender rules
+  (no empty list elements, no repeated parameter) and raises `ServerTimingError` with
+  `field` and `position`.
 - `parse` accepts several field values (headers then trailers).
 - `Metric.params`, `Metric.param()`, `Metric.duration`, `Metric.description` and
   `str(metric)`.

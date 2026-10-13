@@ -11,6 +11,8 @@ from ._syntax import OWS, TCHARS
 
 def field_list(value: str | Iterable[str]) -> list[str]:
     """One field value or several (headers, then trailers) as a checked list."""
+    if isinstance(value, (bytes, bytearray)):
+        raise TypeError("field values must be str; decode header bytes as latin-1 first")
     fields = [value] if isinstance(value, str) else list(value)
     for field in fields:
         if not isinstance(field, str):

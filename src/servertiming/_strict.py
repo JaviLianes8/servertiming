@@ -12,9 +12,10 @@ from ._syntax import OWS, TCHARS, is_quotable
 def parse_strict(text: str, field: int) -> list[Metric]:
     """Parse one field value that must match ``#server-timing-metric`` exactly.
 
-    Empty list elements are accepted, as RFC 9110 5.6.1.2 requires of recipients. A
-    repeated parameter name (which the spec says senders should not produce) and a ``dur``
-    that is not an HTML valid floating-point number are errors too.
+    This is the check a sender needs, so it applies the sender rules: an empty list element
+    is an error (RFC 9110 5.6.1.1), and so are a repeated parameter name (which the spec
+    says senders should not produce) and a ``dur`` that is not an HTML valid
+    floating-point number. An empty field value is a list with no elements and passes.
     """
     return _Strict(text, field).metrics()
 
@@ -49,18 +50,20 @@ class _Strict:
 
     def metrics(self) -> list[Metric]:
         found: list[Metric] = []
+        self.skip_ows()
+        if not self.peek():
+            return found
         while True:
+            if self.peek() in (",", ""):
+                raise self.fail("empty list element")
+            found.append(self.metric())
             self.skip_ows()
             if not self.peek():
                 return found
             if self.peek() != ",":
-                found.append(self.metric())
-                self.skip_ows()
-                if not self.peek():
-                    return found
-                if self.peek() != ",":
-                    raise self.fail("expected ',' or ';'")
+                raise self.fail("expected ',' or ';'")
             self.pos += 1
+            self.skip_ows()
 
     def metric(self) -> Metric:
         name = self.token("a metric name (a token)")
