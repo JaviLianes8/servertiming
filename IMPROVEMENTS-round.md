@@ -2,12 +2,12 @@
 
 Progress:
 - [x] Brainstorm ranked improvements (this file)
-- [ ] Pin the ground truth: W3C Server Timing, RFC 9110, HTML number parsing, Fetch, WPT
-- [ ] Browser-compatible parser that passes the WPT corpus, multiple fields and trailers
-- [ ] Strict parser for the ABNF with error positions
-- [ ] Safe builder: no header injection, escaping, extension parameters, precision
-- [ ] Timing helpers: monotonic clock, context manager and decorator (sync and async), timers
-- [ ] Command line checker
+- [x] Pin the ground truth: W3C Server Timing, RFC 9110, HTML number parsing, Fetch, WPT
+- [x] Browser-compatible parser that passes the WPT corpus, multiple fields and trailers
+- [x] Strict parser for the ABNF with error positions
+- [x] Safe builder: no header injection, escaping, extension parameters, precision
+- [x] Timing helpers: monotonic clock, context manager and decorator (sync and async), timers
+- [x] Command line checker
 - [ ] Contracts: WPT corpus (local), cited spec vectors, round trip, README examples, typing
 - [ ] Docs and packaging: README, CHANGELOG, metadata, installed-wheel e2e test
 - [ ] Gates: ruff format, ruff check, mypy --strict, pytest
