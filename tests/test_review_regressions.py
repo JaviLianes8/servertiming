@@ -66,7 +66,7 @@ def test_a_timer_refuses_a_second_stop_while_the_first_is_recording() -> None:
         if calls[0] == 2:  # the first stop: hold it until a second stop gets through or not
             inside.set()
             proceed.wait(0.3)
-        else:
+        elif calls[0] > 2:  # a second stop reached the clock: let the first one finish
             proceed.set()
         return 0.0
 

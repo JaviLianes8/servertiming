@@ -10,9 +10,9 @@ Progress:
 - [x] Command line checker
 - [x] Contracts: WPT corpus (local), cited spec vectors, round trip, README examples, typing
 - [x] Docs and packaging: README, CHANGELOG, metadata, installed-wheel e2e test
-- [ ] Gates: ruff format, ruff check, mypy --strict, pytest
-- [ ] Mutation run: removing guarded logic makes the suite fail
-- [ ] Independent review findings fixed with regression tests
+- [x] Gates: ruff format, ruff check, mypy --strict, pytest
+- [x] Mutation run: removing guarded logic makes the suite fail
+- [x] Independent review findings fixed with regression tests
 - [ ] Pull request opened, guard clean
 
 ## Starting point
@@ -103,3 +103,17 @@ WPT corpus and the prose; the differences are listed in the README.
 
 Deferred: splitting a long header into several fields under a size limit (no ground truth
 to check it against, and servers differ in their limits).
+
+## Results
+
+- Web-platform-tests: all 85 parsing cases pass (run locally with the fetched corpus).
+- Mutation run: 43 hand-written mutants across every module (parser, number rules,
+  quoting, builder, strict grammar, collector, metric, command line); every one makes the
+  suite fail. Two survivors of the first run were fixed: a dead branch in number parsing
+  was removed, and the timer race and nested measure tests were made deterministic.
+- Independent review: an empty-header CLI input parsed status and header lines as
+  metrics; `Timer.stop` was not atomic; one `Measure` shared its start times across
+  threads and tasks; parameter names and int durations did not round trip; stdin was split
+  on obs-text and decoded with the locale; strict mode accepted empty list elements a
+  sender must not write; obs-text and folded lines were undocumented or dropped. Each is
+  fixed with a regression test in `tests/test_review_regressions.py`.
