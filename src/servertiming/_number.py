@@ -34,9 +34,9 @@ def parse_number(text: str) -> float | None:
     position += len(integer)
     fraction = ""
     if text[position : position + 1] == ".":
+        # "1." and "1.e5" are numbers too: HTML moves past the dot even with no digits.
         fraction = _digits(text, position + 1)
-        if fraction or (integer and text[position + 1 : position + 2] in ("e", "E")):
-            position += 1 + len(fraction)
+        position += 1 + len(fraction)
     if not integer and not fraction:
         return None
     exponent = ""

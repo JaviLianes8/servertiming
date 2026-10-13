@@ -57,6 +57,38 @@ def test_a_timer_stopped_from_two_threads_records_once() -> None:
         assert _race_to_stop() == (["ok", "refused"], 1)
 
 
+def test_a_timer_refuses_a_second_stop_while_the_first_is_recording() -> None:
+    inside, proceed = threading.Event(), threading.Event()
+    calls = [0]
+
+    def clock() -> float:
+        calls[0] += 1
+        if calls[0] == 2:  # the first stop: hold it until a second stop gets through or not
+            inside.set()
+            proceed.wait(0.3)
+        else:
+            proceed.set()
+        return 0.0
+
+    timing = Timing(clock=clock)
+    timer = timing.start("t")
+    first = threading.Thread(target=timer.stop)
+    first.start()
+    inside.wait()
+    with pytest.raises(RuntimeError):
+        timer.stop()
+    first.join()
+    assert len(timing.metrics) == 1
+
+
+def test_one_measure_nested_in_itself_pairs_the_inner_start_with_the_inner_exit() -> None:
+    timing = Timing(clock=iter([0.0, 0.25, 0.5, 1.0]).__next__)
+    job = timing.measure("job")
+    with job, job:
+        pass
+    assert [m.dur for m in timing.metrics] == [250.0, 1000.0]
+
+
 def test_one_measure_entered_by_overlapping_tasks_keeps_their_starts_apart() -> None:
     now = [0.0]
     timing = Timing(clock=lambda: now[0])
