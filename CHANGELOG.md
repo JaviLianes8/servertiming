@@ -30,7 +30,7 @@ This is the first release on PyPI.
 ### Changed
 
 - The distribution, the import package and the command are named `timingheader`, and the
-  project links point at https://github.com/JaviLianes8/timingheader.
+  project links point at <https://github.com/JaviLianes8/timingheader>.
 - Developed as `servertiming` up to 0.2.0, a name PyPI does not accept.
 - `build`, `str(metric)` and `Timing` raise `TypeError` (they raised
   `ServerTimingError`) for an argument of the wrong type: a single `Metric` or a `str`

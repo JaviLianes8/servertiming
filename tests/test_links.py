@@ -1,6 +1,7 @@
 """Every URL in the README, the guide and the project metadata answers.
 
-Needs the network, so it runs only with TIMINGHEADER_LINKS=1, before a release.
+The checks that need the network run only with TIMINGHEADER_LINKS=1, before a release;
+the URL extraction itself is checked on every run.
 """
 
 from __future__ import annotations
@@ -17,17 +18,37 @@ ROOT = Path(__file__).resolve().parents[1]
 REPOSITORY = "https://github.com/JaviLianes8/timingheader"
 BLOB = f"{REPOSITORY}/blob/main/"
 
-pytestmark = pytest.mark.skipif(
+needs_network = pytest.mark.skipif(
     os.environ.get("TIMINGHEADER_LINKS") != "1", reason="set TIMINGHEADER_LINKS=1 to check links"
 )
+
+
+def _extract(text: str) -> set[str]:
+    # A URL that ends a sentence or a clause is followed by punctuation that is not part of it.
+    return {url.rstrip(".,;:!?'") for url in re.findall(r"https?://[^\s)\"<>`]+", text)}
 
 
 def _urls() -> list[str]:
     found: set[str] = set()
     for name in ("README.md", "GUIDE.md", "CHANGELOG.md", "pyproject.toml"):
-        text = (ROOT / name).read_text(encoding="utf-8")
-        found.update(re.findall(r"https?://[^\s)\"<>`]+", text))
+        found.update(_extract((ROOT / name).read_text(encoding="utf-8")))
     return sorted(found)
+
+
+def test_sentence_punctuation_after_a_url_is_not_part_of_it() -> None:
+    text = (
+        "See https://a.example/x. Or https://b.example/y, https://c.example/z; https://d.example:"
+    )
+    assert _extract(text) == {
+        "https://a.example/x",
+        "https://b.example/y",
+        "https://c.example/z",
+        "https://d.example",
+    }
+
+
+def test_no_checked_url_ends_in_punctuation() -> None:
+    assert [url for url in _urls() if url[-1] in ".,;:!?'"] == []
 
 
 def _status(url: str) -> int:
@@ -39,10 +60,12 @@ def _status(url: str) -> int:
         return error.code
 
 
+@needs_network
 def test_the_project_urls_point_at_the_repository() -> None:
     assert REPOSITORY in _urls()
 
 
+@needs_network
 @pytest.mark.parametrize("url", _urls())
 def test_every_url_answers(url: str) -> None:
     if url.startswith(BLOB):
