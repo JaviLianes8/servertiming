@@ -133,13 +133,17 @@ the metrics finished, and `header(precision=None)` builds them.
   nested, or from several threads and asyncio tasks at once, and each entry records its
   own metric. As a decorator it times every call of a plain function, or every run of an
   `async` function up to its return. A generator function or an object that is not
-  callable raises `TypeError`. A block must end in the thread or asyncio task that
-  entered it: an exit with no matching entry there raises `RuntimeError`. Running blocks
+  callable raises `TypeError`. A block must end once, in the thread or asyncio task that
+  entered it. An exit with no matching entry raises `RuntimeError`, and so does an exit
+  from a context copied after the enter: another asyncio task, `asyncio.to_thread`, a new
+  thread on free-threaded Python 3.14, or a second exit through `copy_context().run`.
+  Nothing is recorded for such an exit, and the block still ends where it began. Running blocks
   are held in one context variable shared by every `Measure`, so a long-lived thread does
   not grow with the number of requests it serves.
 - `start(name, desc=None)` returns a `Timer`; `stop()` records it and returns the metric,
   and a second `stop()` raises `RuntimeError`. `running` says whether it is still going.
-- A clock reading that makes a duration infinite or NaN raises `ServerTimingError` where
+- A clock reading that makes a duration infinite, NaN or too large for a float (an `int`
+  reading such as `10**400`) raises `ServerTimingError` where
   the block, the call or the timer ends, and nothing is recorded for it, so the other
   metrics still build.
 - `Measure(timing, name, desc)` and `Timer(timing, name, desc, start)` can be built

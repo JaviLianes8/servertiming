@@ -9,7 +9,6 @@ from collections.abc import Callable
 
 from ._build import build, render
 from ._errors import ServerTimingError, shown
-from ._measure import Measure, Timer
 from ._metric import Metric
 
 
@@ -21,8 +20,9 @@ class Timing:
     Names and descriptions are checked when recorded, so a bad one fails at the call
     site instead of when the header is rendered: ``ServerTimingError`` for a value that
     cannot be sent, ``TypeError`` for one of the wrong type. Recording is safe from
-    several threads. A clock reading that makes a duration infinite or NaN raises
-    ``ServerTimingError`` where the measurement ends, and nothing is recorded for it.
+    several threads. A clock reading that makes a duration infinite, NaN or too large for
+    a float raises ``ServerTimingError`` where the measurement ends, and nothing is
+    recorded for it.
 
     >>> import itertools
     >>> from timingheader import Timing
@@ -113,7 +113,11 @@ class Timing:
         return build(self.metrics, precision=precision)
 
     def _finish(self, name: str, desc: str | None, start: float) -> Metric:
-        dur = (self._clock() - start) * 1000.0
+        try:
+            dur = (self._clock() - start) * 1000.0
+        except OverflowError:
+            # An int reading too large for a float: as unusable as an infinite one.
+            dur = math.inf
         if not math.isfinite(dur):
             # Recorded, it would make every later header() fail and lose the other metrics.
             raise ServerTimingError(f"the clock gave a duration that is not finite: {shown(dur)}")
@@ -121,3 +125,8 @@ class Timing:
         with self._lock:
             self._metrics.append(metric)
         return metric
+
+
+# Imported last, once Timing exists: the annotations of Measure and Timer name Timing, so
+# their module imports it at run time, and typing.get_type_hints can resolve them.
+from ._measure import Measure, Timer  # noqa: E402

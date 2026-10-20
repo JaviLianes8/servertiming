@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable as _Iterable
 from typing import TYPE_CHECKING as _TYPE_CHECKING
 
 from ._build import build
@@ -68,3 +69,8 @@ def parse(header: str | Iterable[str], *, strict: bool = False) -> list[Metric]:
     for index, field in enumerate(fields):
         metrics.extend(_parse_strict(field, index))
     return metrics
+
+
+# Resolved now: ``Iterable`` is not a name of the package, so the string annotation would
+# fail in typing.get_type_hints and inspect.signature(eval_str=True).
+parse.__annotations__["header"] = str | _Iterable[str]

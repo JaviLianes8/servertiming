@@ -96,6 +96,9 @@ def _errors(fields: list[str]) -> list[ServerTimingError]:
 
 
 def _write(text: str) -> None:
+    if sys.stdout is None:
+        # No stdout at all (pythonw, a service, fd 1 closed): like a reader that stopped.
+        return
     # A console or pipe that cannot show a character gets an escape, not a traceback.
     encoding = sys.stdout.encoding or "utf-8"
     try:

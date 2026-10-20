@@ -60,7 +60,17 @@ This is the first release on PyPI.
   `Measure` shares one, so a long-lived thread (a WSGI worker, a script's main thread) no
   longer grows by about 120 bytes per request.
 - Leaving a `Measure` block in another thread or task than the one that entered it, or
-  without entering it, raises `RuntimeError` (it raised an internal `ValueError`).
+  without entering it, raises `RuntimeError` (it raised an internal `ValueError`). This
+  holds for a context copied after the enter too (another asyncio task,
+  `asyncio.to_thread`, every new thread on free-threaded Python 3.14): the exit there
+  succeeded, and the exit where the block began recorded the metric a second time. A
+  block ends once: a second exit through a copy of its context raises `RuntimeError`.
+- A clock reading that is an `int` too large for a float raises `ServerTimingError` where
+  the measurement ends, as a duration that is not finite does (it raised
+  `OverflowError`); nothing is recorded and a `Timer` keeps running.
+- `typing.get_type_hints` and `inspect.signature(..., eval_str=True)` resolve the
+  annotations of `parse` and of the `Measure` and `Timer` constructors (they raised
+  `NameError`).
 - A clock reading that makes a duration infinite or NaN raises `ServerTimingError` where
   the measurement ends, and nothing is recorded (it was recorded, and every later
   `header()` failed).
@@ -81,6 +91,9 @@ This is the first release on PyPI.
   arguments, blank ones included.
 - The command ends quietly when its reader closes the output early (`| head`), with the
   exit status of the values, instead of printing a `BrokenPipeError` traceback.
+- The command runs with no stdout at all (`pythonw`, a service, file descriptor 1 closed)
+  as if its reader had stopped: it checks the values and exits with their status (it
+  printed an `AttributeError` traceback and exited with 1).
 
 ### Added
 

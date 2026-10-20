@@ -98,6 +98,7 @@ def _not_a_timing() -> Timing:
         (lambda: Timer(Timing(), "a", "x\ny", 0.0), ServerTimingError),
         (lambda: Timer(_not_a_timing(), "a", None, 0.0), TypeError),
         (lambda: Timer(Timing(), "a", None, "0"), TypeError),  # type: ignore[arg-type]
+        (lambda: Timer(Timing(clock=lambda: 2.0), "a", None, True), TypeError),
     ],
 )
 def test_the_measure_and_timer_constructors_check_what_they_record(

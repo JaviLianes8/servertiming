@@ -134,7 +134,7 @@ print(timing.header())
 
 Names and descriptions are checked when recorded, so a bad one fails where it is written,
 not when the response goes out. Recording is safe from several threads, and a `with`
-block must end in the thread or task that started it.
+block must end once, in the thread or task that started it.
 
 ## Command line
 
@@ -206,8 +206,8 @@ web framework: `flask-server-timing` (last release 2018), `django-server-timing`
 `aioservertiming` (aiohttp). None of them parses a header, and none escapes a quote in a
 description, so a description with a `"` produces a broken header. The project named
 `server-timing` on PyPI is an empty 0.0.1 package from 2018. `timingheader` is
-standalone, typed and has no dependencies: it builds a safe header, reads one back as the
-specification says, validates it, and offers a small collector.
+standalone, typed and has no dependencies: it builds a safe header, reads one back as
+browsers and the web-platform-tests corpus do, validates it, and offers a small collector.
 
 ## Development
 
