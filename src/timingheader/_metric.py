@@ -2,14 +2,14 @@
 
 from __future__ import annotations
 
-import contextlib
+import math
 from dataclasses import dataclass
 
 from ._errors import shown
 from ._syntax import ascii_lower
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, init=False)
 class Metric:
     """One Server-Timing metric: a name, an optional duration, label and extra parameters.
 
@@ -17,9 +17,9 @@ class Metric:
     when it gave no description. ``params`` holds any other parameters in header order as
     ``(name, value)`` pairs; names are compared without regard to ASCII case and stored
     with A to Z in lower case, and a list is stored as a tuple. An ``int`` duration is
-    stored as a ``float``. Durations are milliseconds by convention. Nothing is validated
-    here, because ``parse`` keeps what a browser keeps; ``build`` and ``str()`` check
-    every part before writing it.
+    stored as a ``float``, one beyond the range of a float as an infinity. Durations are
+    milliseconds by convention. Nothing is validated here, because ``parse`` keeps what a
+    browser keeps; ``build`` and ``str()`` check every part before writing it.
 
     >>> from timingheader import Metric
     >>> metric = Metric("cdn", 7, params=[("Hit", "1")])
@@ -34,24 +34,29 @@ class Metric:
     desc: str | None = None
     params: tuple[tuple[str, str], ...] = ()
 
-    def __post_init__(self) -> None:
+    def __init__(
+        self,
+        name: str,
+        dur: float | None = None,
+        desc: str | None = None,
+        params: tuple[tuple[str, str], ...] | list[tuple[str, str]] = (),
+    ) -> None:
         # Parameter names are case-insensitive and durations are floats: normalising both
         # makes a metric equal to what parse reads back from its serialization. Values of
         # the wrong type are left alone for build to reject with a clear message.
-        if type(self.dur) is int:
-            with contextlib.suppress(OverflowError):
-                object.__setattr__(self, "dur", float(self.dur))
-        pairs = self.params
-        if isinstance(pairs, list):
-            pairs = tuple(pairs)
-            object.__setattr__(self, "params", pairs)
-        if isinstance(pairs, tuple) and all(
-            isinstance(pair, tuple) and len(pair) == 2 and isinstance(pair[0], str)
-            for pair in pairs
-        ):
-            object.__setattr__(
-                self, "params", tuple((ascii_lower(key), value) for key, value in pairs)
-            )
+        if type(dur) is int:
+            try:
+                dur = float(dur)
+            except OverflowError:
+                dur = math.inf if dur > 0 else -math.inf
+        if isinstance(params, list):
+            params = tuple(params)
+        if isinstance(params, tuple) and all(_is_pair(pair) for pair in params):
+            params = tuple((ascii_lower(key), value) for key, value in params)
+        object.__setattr__(self, "name", name)
+        object.__setattr__(self, "dur", dur)
+        object.__setattr__(self, "desc", desc)
+        object.__setattr__(self, "params", params)
 
     @property
     def duration(self) -> float:
@@ -76,7 +81,8 @@ class Metric:
     def param(self, name: str) -> str | None:
         """The value of the extra parameter ``name`` (case-insensitive), if present.
 
-        Raises ``TypeError`` when ``name`` is not a ``str``.
+        Raises ``TypeError`` when ``name`` is not a ``str``, or when ``params`` does not
+        hold ``(name, value)`` pairs with a ``str`` name.
 
         >>> from timingheader import parse
         >>> (metric,) = parse("cdn;HIT=1;region=eu")
@@ -86,9 +92,14 @@ class Metric:
         if not isinstance(name, str):
             raise TypeError(f"a parameter name must be a str, got {shown(name)}")
         wanted = ascii_lower(name)
-        for key, value in self.params:
-            if ascii_lower(key) == wanted:
-                return value
+        params = self.params
+        if not isinstance(params, tuple):
+            raise TypeError(f"params must hold (name, value) pairs, got {shown(params)}")
+        for pair in params:
+            if not _is_pair(pair):
+                raise TypeError(f"params must hold (name, value) pairs, got {shown(pair)}")
+            if ascii_lower(pair[0]) == wanted:
+                return pair[1]
         return None
 
     def __str__(self) -> str:
@@ -101,3 +112,7 @@ class Metric:
         from ._build import render
 
         return render(self)
+
+
+def _is_pair(pair: object) -> bool:
+    return isinstance(pair, tuple) and len(pair) == 2 and isinstance(pair[0], str)

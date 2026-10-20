@@ -51,7 +51,7 @@ def test_the_default_clock_is_perf_counter() -> None:
 def test_metric_is_a_frozen_dataclass_with_pinned_fields() -> None:
     fields = [(f.name, f.default) for f in dataclasses.fields(Metric)]
     assert fields == [("name", dataclasses.MISSING), ("dur", None), ("desc", None), ("params", ())]
-    metric = Metric("db", 1, "x", [("A", "1")])  # type: ignore[arg-type]
+    metric = Metric("db", 1, "x", [("A", "1")])
     with pytest.raises(dataclasses.FrozenInstanceError):
         metric.name = "other"  # type: ignore[misc]
     assert pickle.loads(pickle.dumps(metric)) == metric

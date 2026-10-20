@@ -81,8 +81,9 @@ print([parse(f"a;dur={text}")[0].dur for text in ["12ms", "+5", ".5", "1.5.2", "
 `build(metrics, *, precision=None)` joins metrics with `", "`; `str(metric)` writes one.
 Each metric is written as `name;dur=...;desc=...` followed by its other parameters in
 order. A value that is a token is written bare, anything else as a quoted string with
-`"` and `\` escaped. Durations are written in the shortest form that reads back as the
-same double (`100`, `0.1`, `1e-05`); `precision` (an int from 0 to 20) rounds them to
+`"` and `\` escaped. Durations are written with the shortest digits that read back as
+the same double (Python's `repr`), an exponent without a plus sign or leading zeros
+(`100`, `0.1`, `1e-5`, `1e16`); `precision` (an int from 0 to 20) rounds them to
 that many decimal places. Whatever `build` writes, strict `parse` reads back as the same
 metrics.
 
@@ -113,11 +114,14 @@ for bad in [Metric("db", desc="caf☃"), Metric("db", params=(("dur", "1"),))]:
 
 A frozen dataclass with `name`, `dur`, `desc` and `params`. Construction checks nothing,
 because `parse` must be able to return what a browser keeps; `build` checks. It does
-normalise: an `int` duration is stored as a `float`, parameter names are lowered in
-ASCII only, and a list of parameters becomes a tuple, so a metric equals what `parse`
-reads back from its serialization and stays hashable. `duration` and `description` give
+normalise: an `int` duration is stored as a `float` (one beyond the range of a float as
+an infinity, which `build` refuses), parameter names are lowered in ASCII only, and a
+list of parameters becomes a tuple, so a metric equals what `parse` reads back from its
+serialization and stays hashable. `params` is typed as a tuple of `(name, value)` pairs
+of `str`; the constructor also takes a list of them. `duration` and `description` give
 the browser view; `param(name)` looks a parameter up without regard to case and raises
-`TypeError` for a name that is not a `str`.
+`TypeError` for a name that is not a `str`, or for `params` that do not hold
+`(name, value)` pairs with a `str` name.
 
 ## Recording: `Timing`, `Measure` and `Timer`
 

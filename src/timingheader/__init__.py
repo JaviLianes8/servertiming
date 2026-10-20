@@ -8,9 +8,10 @@ from typing import TYPE_CHECKING as _TYPE_CHECKING
 from ._build import build
 from ._collector import Timing
 from ._errors import ServerTimingError
-from ._measure import Measure, Timer
+from ._measure import Measure
 from ._metric import Metric
 from ._strict import parse_values as _parse_values
+from ._timer import Timer
 
 if _TYPE_CHECKING:
     from collections.abc import Iterable

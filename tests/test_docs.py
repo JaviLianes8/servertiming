@@ -91,7 +91,7 @@ def test_version_matches_pyproject() -> None:
 
 def test_changelog_has_an_entry_for_this_version() -> None:
     text = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
-    assert f"## [{timingheader.__version__}]" in text
+    assert re.search(rf"^## {re.escape(timingheader.__version__)} - \d{{4}}-\d\d-\d\d$", text, re.M)
 
 
 def _tracked_text_files() -> list[Path]:

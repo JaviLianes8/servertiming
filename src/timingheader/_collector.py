@@ -130,5 +130,6 @@ class Timing:
 
 
 # Imported last, once Timing exists: the annotations of Measure and Timer name Timing, so
-# their module imports it at run time, and typing.get_type_hints can resolve them.
-from ._measure import Measure, Timer  # noqa: E402
+# their modules import it at run time, and typing.get_type_hints can resolve them.
+from ._measure import Measure  # noqa: E402
+from ._timer import Timer  # noqa: E402

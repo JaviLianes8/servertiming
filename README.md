@@ -39,9 +39,9 @@ print(header)
 ```
 
 The builder never writes a header that could split the response. A name must be a token,
-and a description holding CR, LF or another control character raises `ServerTimingError`
-(a `ValueError`); an argument of the wrong type raises `TypeError`. Characters U+0080 to
-U+00FF are allowed inside quotes, as RFC 9110 permits, and reach the client correctly
+and a description holding CR, LF or a control character other than tab raises
+`ServerTimingError` (a `ValueError`); an argument of the wrong type raises `TypeError`.
+Characters U+0080 to U+00FF are allowed inside quotes, as RFC 9110 permits, and reach the client correctly
 only when your framework encodes headers as ISO-8859-1 (WSGI and ASGI do); keep
 descriptions to ASCII if you are unsure. Parameter names are case-insensitive and are
 stored and written in lower case:

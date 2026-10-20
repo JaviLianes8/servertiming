@@ -18,7 +18,7 @@ def build(metrics: Iterable[Metric], *, precision: int | None = None) -> str:
 
     Raises ``ServerTimingError`` (a ``ValueError``) for a value that cannot be written
     safely: a name or parameter name that is not a token, a description or parameter value
-    holding a character no HTTP field can carry (CR, LF, NUL and other controls), a
+    holding a character no HTTP field can carry (CR, LF, NUL and every control but tab), a
     duration that is not finite, or a repeated parameter. Raises ``TypeError`` for an
     argument of the wrong type: ``metrics`` a single ``Metric`` or a ``str``, an item that
     is not a ``Metric``, or a part of a metric that is not a ``str`` (or, for the duration,
@@ -41,6 +41,8 @@ def build(metrics: Iterable[Metric], *, precision: int | None = None) -> str:
     if precision is not None:
         if isinstance(precision, bool) or not isinstance(precision, int):
             raise TypeError(f"precision must be an int or None, got {shown(precision)}")
+        # An int subclass could bend the range check or the format spec through its hooks.
+        precision = int.__index__(precision)
         if not 0 <= precision <= MAX_PRECISION:
             raise ServerTimingError(
                 f"precision must be from 0 to {MAX_PRECISION}, got {shown(precision)}"

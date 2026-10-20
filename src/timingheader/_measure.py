@@ -1,4 +1,4 @@
-"""The two ways a running measurement is held: a block or decorator, and a timer."""
+"""A running measurement held as a ``with`` block or a function decorator."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ import sys
 import threading
 from collections.abc import Callable
 from contextvars import ContextVar
-from typing import Any, TypeVar, cast
+from typing import Any, TypeAlias, TypeVar, cast
 
 from ._build import render
 from ._collector import Timing
@@ -30,10 +30,15 @@ class _Entry:
         self.left = False
 
 
+# The running entries of a context, newest first, as a linked stack of (entry, rest)
+# pairs: entering and the usual innermost exit cost the same at any depth, and a copied
+# context shares the pairs it inherited without copying them.
+_Stack: TypeAlias = "tuple[_Entry, _Stack] | None"
+
 # One variable for every Measure: a context keeps each variable ever set in it for as long
 # as it lives, so a variable per Measure would grow a long-lived thread without bound.
 # A context sees only its own entries, and those of the context it was copied from.
-_RUNNING: ContextVar[tuple[_Entry, ...]] = ContextVar("running", default=())
+_RUNNING: ContextVar[_Stack] = ContextVar("running", default=None)
 
 
 def _owner() -> tuple[threading.Thread, object]:
@@ -89,18 +94,23 @@ class Measure:
     def __enter__(self) -> None:
         # The start times live in the context, so one Measure entered from several threads
         # or asyncio tasks at once keeps each entry apart.
-        _RUNNING.set((*_RUNNING.get(), _Entry(self, self._timing._clock())))
+        _RUNNING.set((_Entry(self, self._timing._clock()), _RUNNING.get()))
 
     def __exit__(self, *exc_info: object) -> None:
-        running = _RUNNING.get()
-        for index in range(len(running) - 1, -1, -1):
-            entry = running[index]
+        above: list[_Entry] = []
+        node = _RUNNING.get()
+        while node is not None:
+            entry, node = node
             if entry.measure is not self:
+                above.append(entry)
                 continue
             thread, task = _owner()
             if entry.owner[0] is not thread or entry.owner[1] is not task:
                 raise RuntimeError("measure exited in another thread or task than its enter")
-            _RUNNING.set(running[:index] + running[index + 1 :])
+            # Only the entries above this one are rebuilt: none for an innermost exit.
+            for kept in reversed(above):
+                node = (kept, node)
+            _RUNNING.set(node)
             if entry.left:
                 raise RuntimeError("measure entry already exited in a copy of this context")
             # Only the owning thread gets here, so no other thread can race this flag.
@@ -136,52 +146,3 @@ class Measure:
                 timing._finish(name, desc, start)
 
         return cast(F, run)
-
-
-class Timer:
-    """A running measurement returned by ``Timing.start``; ``stop()`` records it once.
-
-    Usually created by ``Timing.start``; the constructor checks its arguments the same way,
-    and ``start`` must be a reading of the timing's clock.
-
-    >>> import itertools
-    >>> from timingheader import Timing
-    >>> ticks = itertools.count(0.0, 0.1)
-    >>> timing = Timing(clock=lambda: next(ticks))
-    >>> timer = timing.start("upload", desc="s3")
-    >>> timer.running
-    True
-    >>> timer.stop()
-    Metric(name='upload', dur=100.0, desc='s3', params=())
-    >>> timer.running
-    False
-    """
-
-    def __init__(self, timing: Timing, name: str, desc: str | None, start: float) -> None:
-        checked(timing, name, desc)
-        if isinstance(start, bool) or not isinstance(start, (int, float)):
-            raise TypeError(f"start must be a clock reading (a float), got {shown(start)}")
-        self._timing = timing
-        self._name = name
-        self._desc = desc
-        self._start = start
-        self._metric: Metric | None = None
-        self._lock = threading.Lock()
-
-    @property
-    def running(self) -> bool:
-        """Whether ``stop`` has not been called yet."""
-        return self._metric is None
-
-    def stop(self) -> Metric:
-        """Record the elapsed milliseconds and return the metric.
-
-        A timer stops once: a second call raises ``RuntimeError``. A clock reading that
-        gives a duration that is not finite (or too large for a float) raises
-        ``ServerTimingError``, records nothing and leaves the timer running.
-        """
-        with self._lock:
-            if self._metric is not None:
-                raise RuntimeError(f"timer {shown(self._name)} is already stopped")
-            self._metric = self._timing._finish(self._name, self._desc, self._start)
-            return self._metric

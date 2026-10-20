@@ -11,6 +11,7 @@ from ._errors import ServerTimingError, shown
 _VALID = re.compile(r"-?(?:[0-9]+(?:\.[0-9]+)?|\.[0-9]+)(?:[eE][-+]?[0-9]+)?")
 _DIGITS = re.compile(r"[0-9]*")
 _HTML_WHITESPACE = " \t\n\f\r"
+_EXPONENT = re.compile(r"e\+?(-?)0*([0-9])")
 
 
 def is_valid_number(text: str) -> bool:
@@ -57,7 +58,11 @@ def parse_number(text: str) -> float | None:
 
 
 def format_number(value: float, precision: int | None = None) -> str:
-    """Write a finite duration compactly: ``12.5``, ``100``, ``1e-05``."""
+    """Write a finite duration with the shortest digits that read back as the same double.
+
+    The digits and the choice of notation are Python's ``repr``; an exponent is written
+    without a plus sign or leading zeros: ``12.5``, ``100``, ``1e-5``, ``1e16``.
+    """
     if isinstance(value, bool) or not isinstance(value, (int, float)):
         raise TypeError(f"duration must be an int or a float, got {shown(value)}")
     try:
@@ -67,7 +72,9 @@ def format_number(value: float, precision: int | None = None) -> str:
     if not math.isfinite(number):
         raise ServerTimingError(f"duration must be a finite number, got {shown(value)}")
     if precision is None:
-        text = repr(number)
+        # repr gives the shortest digits that read back as the same double, but its exponent
+        # has a "+" and a leading zero the number does not need ("1e+16", "1e-05").
+        text = _EXPONENT.sub(r"e\1\2", repr(number))
     else:
         text = f"{number:.{precision}f}"
         if "." in text:

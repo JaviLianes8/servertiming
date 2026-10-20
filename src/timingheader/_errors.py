@@ -35,9 +35,10 @@ class ServerTimingError(ValueError):
 
 def shown(value: object) -> str:
     """``repr(value)`` cut to a short excerpt, safe for any object in an error message."""
-    if isinstance(value, int) and not isinstance(value, bool) and abs(value) >= 10**_SHOWN:
+    # The int methods are called directly: a subclass may override abs or bit_length.
+    if isinstance(value, int) and not isinstance(value, bool) and int.__abs__(value) >= 10**_SHOWN:
         # repr of a huge int is slow and can raise past the digit limit.
-        return f"an int of {value.bit_length()} bits"
+        return f"an int of {int.bit_length(value)} bits"
     try:
         text = repr(value)
     except Exception:

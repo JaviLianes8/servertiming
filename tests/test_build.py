@@ -23,7 +23,7 @@ def test_build_of_nothing_is_empty() -> None:
 
 @pytest.mark.parametrize(
     ("dur", "text"),
-    [(100.0, "100"), (0.5, "0.5"), (7, "7"), (-0.0, "0"), (1e-05, "1e-05"), (1e16, "1e+16")],
+    [(100.0, "100"), (0.5, "0.5"), (7, "7"), (-0.0, "0"), (1e-05, "1e-5"), (1e16, "1e16")],
 )
 def test_durations_are_written_compactly(dur: float, text: str) -> None:
     assert build([Metric("cpu", dur=dur)]) == f"cpu;dur={text}"

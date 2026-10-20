@@ -122,3 +122,15 @@ def test_a_reader_that_closes_early_gets_no_traceback(tmp_path: Path) -> None:
         proc.wait(timeout=120)
     assert b"Traceback" not in err and b"Error" not in err, err[-2000:]
     assert proc.returncode == 0
+
+
+@pytest.mark.parametrize("fold", [b"\t", b" ", b" \t"])
+def test_a_line_folded_with_a_tab_or_a_space_continues_the_field(fold: bytes) -> None:
+    raw = b"HTTP/1.1 200 OK\r\nServer-Timing: db;dur=1,\r\n" + fold + b"cache;desc=hit\r\n\r\n"
+    code, out, err = _run("--json", stdin=raw)
+    assert (code, err) == (0, b"")
+    assert json.loads(out) == [
+        {"name": "db", "dur": 1.0, "desc": None, "params": {}},
+        {"name": "cache", "dur": None, "desc": "hit", "params": {}},
+    ]
+    assert fields_from_lines(["Server-Timing: a", "\tb"]) == ["a b"]

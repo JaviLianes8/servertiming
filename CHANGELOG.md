@@ -4,9 +4,9 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## Unreleased
 
-## [1.0.0] - 2026-10-19
+## 1.0.0 - 2026-10-20
 
 The public API is now stable: the seven names in `timingheader.__all__`, their
 signatures, defaults and error types follow Semantic Versioning from this release on.
@@ -53,8 +53,8 @@ This is the first release on PyPI.
   bare `ValueError` from `repr`.
 - Every public name reports `timingheader` as its module (`build` and the property
   getters too), so reprs and pickles never name a private module. The package no longer
-  exposes its internal helpers under public names: `dir(timingheader)` holds only the
-  names in `__all__`.
+  exposes its internal helpers under public names: the names in `dir(timingheader)`
+  without a leading underscore are exactly `__all__`.
 - A `with timing.measure(...)` block no longer leaves a context variable behind: every
   `Measure` shares one, so a long-lived thread (a WSGI worker, a script's main thread) no
   longer grows by about 120 bytes per request.
@@ -91,6 +91,24 @@ This is the first release on PyPI.
   arguments, blank ones included.
 - The command ends quietly when its reader closes the output early (`| head`), with the
   exit status of the values, instead of printing a `BrokenPipeError` traceback.
+- Durations are written with an exponent without a plus sign or leading zeros: `1e-5`
+  and `1e16` (they were written `1e-05` and `1e+16`). Both forms read back as the same
+  double.
+- An `int` duration beyond the range of a float is stored in `Metric` as an infinity of
+  its sign, so `Metric.dur` and `Metric.duration` are always a `float` or `None` and
+  `repr(metric)` works (it kept the `int`; `repr` raised `ValueError` past 4300 digits).
+  `build` refuses it with `ServerTimingError`, as before.
+- The `Metric` constructor is typed to take `params` as a list of pairs as well as a
+  tuple, as it always did at run time; the field stays a tuple.
+- `Metric.param` raises `TypeError` when `params` does not hold `(name, value)` pairs with
+  a `str` name (it raised `ValueError` or `AttributeError`).
+- `precision` given as a subclass of `int` is used as its exact `int` value, so its
+  methods cannot get around the range check.
+- A `TypeError` about an `int` subclass in a name, description or parameter name is
+  raised as documented even when the subclass overrides `abs` or `bit_length`.
+- Entering and leaving nested `Measure` blocks takes the same time at any depth, and
+  blocks left open no longer slow later blocks in the same context (both grew with the
+  number of running blocks, so deep nesting took quadratic time).
 - The command runs with no stdout at all (`pythonw`, a service, file descriptor 1 closed)
   as if its reader had stopped: it checks the values and exits with their status (it
   printed an `AttributeError` traceback and exited with 1).
@@ -101,7 +119,7 @@ This is the first release on PyPI.
 - A guide (`GUIDE.md`) describing every rule, and the differences measured between real
   browsers on malformed headers.
 
-## [0.2.0]
+## 0.2.0 - 2026-10-13
 
 ### Changed
 
@@ -129,9 +147,9 @@ This is the first release on PyPI.
   `str(metric)`.
 - `build(..., precision=n)` and `Timing.header(precision=n)` round durations.
 - `Timing.measure` decorates plain and `async` functions; `Timing.start` returns a `Timer`.
-- The `timingheader` command shows and checks values from arguments or response headers.
+- The `servertiming` command shows and checks values from arguments or response headers.
 
-## [0.1.0]
+## 0.1.0 - 2026-10-12
 
 - First release: `build` and `parse` for the Server-Timing header, a `Metric` value
   type, and a `Timing` collector with a `measure` context manager.
