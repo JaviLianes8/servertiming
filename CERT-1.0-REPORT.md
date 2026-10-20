@@ -17,7 +17,8 @@ Progress:
 - [x] Author mutation round (item 18)
 - [x] Gates (item 15)
 - [x] PR and trace guard (merge and publish, item 17, are the maintainer's)
-- [ ] Five QA lenses (item 19): round 1 fixed in 45e91a9; round 2 (11 findings) fixed in 921ccf5 and 87f8cae; re-verification by the lenses pending
+- [x] Project links moved to the new repository name (ae28650)
+- [ ] Five QA lenses (item 19): round 1 fixed in 45e91a9; round 2 (11 findings) fixed in 921ccf5 and 87f8cae; round 3 (b, d PASS; c one low finding, fixed in ae28650; a, e did not report) re-verification pending
 - [ ] Independent reviewer (item 16, run after this stage)
 
 ## Scorecard
@@ -33,16 +34,16 @@ Progress:
 | 7 | Real ground truth | PASS: W3C, RFC 9110, HTML and Fetch fetched at fixed revisions, WPT corpus, Chrome 155, Firefox 158 and WebKit driven over HTTP |
 | 8 | Real e2e from the wheel | PASS: built wheel installed in a throwaway venv, used from an empty folder, command driven by subprocess; no PyPI release to upgrade from |
 | 9 | Seeded fuzz, no crash, hang or blowup | PASS |
-| 10 | Supported Pythons | PASS: CPython 3.10.19, 3.11.5, 3.12.12, 3.13.2, 3.14.2, 3.14.2t (all again at 87f8cae); 3.8.20 and 3.9.25 refused by `requires-python` |
+| 10 | Supported Pythons | PASS: CPython 3.10.19, 3.11.5, 3.12.12, 3.13.2, 3.14.2, 3.14.2t (all again at ae28650); 3.8.20 and 3.9.25 refused by `requires-python` |
 | 11 | README and `twine check` | PASS: `twine check --strict`, absolute links, badge |
 | 12 | Dated CHANGELOG section | PASS: 1.0.0, 2026-10-19 |
 | 13 | pyproject 1.0.0, Production/Stable | PASS |
 | 14 | sdist and wheel contents | PASS |
-| 15 | Gates each exit 0 | PASS: see Gates |
+| 15 | Gates each exit 0 | PASS: see Gates (last at ae28650) |
 | 16 | Independent reviewer | pending (next stage) |
 | 17 | PR and trace guard | PR from `release/1.0.0`, trace guard CLEAN; merge and publish left to the maintainer |
-| 18 | Contracts bite (mutations) | PASS: author round of 30 mutants, all killed (one after a contract was added) |
-| 19 | Five independent QA lenses | round 1: 21 findings, round 2: 11 findings, all fixed (see QA lenses); re-verification pending |
+| 18 | Contracts bite (mutations) | PASS: author round of 30 mutants, all killed (one after a contract was added); M26 again and M31, M32 at ae28650, killed |
+| 19 | Five independent QA lenses | round 1: 21 findings, round 2: 11 findings, round 3: 1 finding, all fixed (see QA lenses); re-verification pending |
 
 ## Name
 
@@ -52,9 +53,13 @@ PyPI refused `servertiming`. The new name `timingheader` was checked on 2026-10-
 `timing.headers`, `tlmlngheader`, `t1m1ngheader` and `tImIngheader`, and
 `pypi.org/simple/timingheader/` is 404. The distribution, the import package, the
 command, the tests, the docs and the project URLs use it; the old name appears in one
-CHANGELOG line. The GitHub repository and the local folder keep the old name; the project
-URLs and the README links point at https://github.com/JaviLianes8/servertiming, which
-answers today and which GitHub redirects if the repository is ever renamed.
+CHANGELOG line. The project URLs and the README links point at
+https://github.com/JaviLianes8/timingheader (changed from the old repository URL in
+ae28650): the GitHub repository and the local folder keep the old name until the merge,
+where the maintainer renames them, so that URL answers 404 until then and
+`tests/test_links.py` is to be run after the rename (every other URL, and every linked file
+of this branch, is checked as before). Rechecked on 2026-10-20: `timingheader`,
+`timing-header`, `timing_header`, `timing.header` and `timingheaders` still answer 404 on PyPI.
 
 ## Defects found in 0.2.0
 
@@ -273,3 +278,37 @@ this PC (wheel installed in a fresh venv, the sdist's suite with `src` removed):
 3.10.19, 3.11.5, 3.12.12, 3.13.2, 3.14.2 and 3.14.2t all pass (572 or 573 passed, 34
 skipped; 16 doctests each), and the wheel e2e passes; `twine check --strict` passes on
 both artifacts.
+
+### Round 3
+
+The lenses re-checked 90c703f. Lens b (correctness) and lens d (packaging, e2e, every
+Python) reported PASS with every round 2 finding confirmed fixed. Lens c confirmed its
+round 2 findings fixed and reported one new low finding. Lenses a and e did not finish a
+report; they are to be run again. Both PASS verdicts predate ae28650, which changes
+`_collector.py`, so they are to be renewed on it.
+
+| Lens | Id | Finding | Fix |
+| --- | --- | --- | --- |
+| c | N3 | The clock was called inside the guard that turns an `OverflowError` from a huge `int` reading into an infinite duration, so an `OverflowError` raised by the clock itself was reported as "the clock gave a duration that is not finite: inf", with the original exception lost | The clock is read before the guard; only the subtraction and the scaling are guarded, so an exception from the clock (an `OverflowError` included) reaches the caller as it is, and nothing is recorded. Contract `tests/test_qa_clock.py` (timer, block, decorated function; an `OverflowError` and another exception), red on 90c703f for the `OverflowError` cases. CHANGELOG and GUIDE say so |
+
+Also in ae28650, at the maintainer's instruction for the rename: the project URLs, the
+README links and their tests point at https://github.com/JaviLianes8/timingheader (see
+Name), and the CHANGELOG names the old project in one line.
+
+Mutants on `_collector.py`, one at a time on a copy of ae28650 (the suite with `-x`):
+M26 rewritten for the new code ("durations in the wrong unit"), killed by the doctest of
+`timingheader.Measure`; M31 "clock read inside the overflow guard" (the N3 code), killed by
+`test_qa_clock.py::test_an_error_from_the_clock_reaches_the_caller_of_stop[error0]`; M32
+"overflow from a huge int reading re-raised", killed by
+`test_qa_contexts.py::test_a_clock_reading_too_large_for_a_float_raises_the_documented_error`.
+
+Gates at ae28650 on Elena's PC under a machine turn (CPython 3.14.2, fresh clone of the
+pushed branch and venv, fetched files present, `TIMINGHEADER_E2E=1`): `ruff format
+--check .`, `ruff check .`, `mypy --strict src`, `mypy --strict src tests` exit 0;
+`pytest`: 595 passed, 33 skipped (browser tests and the link check, which run on request).
+`twine check --strict` passes on the wheel and the sdist built from that clone.
+Interpreter matrix at ae28650 on the same machine (each interpreter copied from this PC,
+the wheel installed in a fresh venv, the sdist's suite with `src` removed and the fetched
+files present, then the installed package's doctests): CPython 3.10.19, 3.11.5 and 3.12.12
+577 passed, 3.13.2, 3.14.2 and 3.14.2t 578 passed (34 skipped each), 16 doctests each;
+3.8.20 and 3.9.25 refuse the install (`requires-python >=3.10`).
