@@ -18,8 +18,8 @@ Progress:
 - [x] Gates (item 15)
 - [x] PR and trace guard (merge and publish, item 17, are the maintainer's)
 - [x] Project links moved to the new repository name (ae28650)
-- [ ] Five QA lenses (item 19): round 1 fixed in 45e91a9; round 2 (11 findings) fixed in 921ccf5 and 87f8cae; round 3 (b, d PASS; c one low finding, fixed in ae28650; a, e did not report); round 4 (a, b, c, e on 308bf7c, 13 findings) fixed in 065be67; round 5 (a, c, e on e37821c, 5 findings) fixed in 5aeef08; round 6 (e on 142320f, 3 findings) fixed in f718be2; re-verification pending
-- [ ] Independent reviewer (item 16): round 1 on fa5cdc8 (FAIL on item 11 only, one low finding) fixed in b565131; re-review pending
+- [x] Five QA lenses (item 19): round 1 fixed in 45e91a9; round 2 (11 findings) fixed in 921ccf5 and 87f8cae; round 3 (b, d PASS; c one low finding, fixed in ae28650; a, e did not report); round 4 (a, b, c, e on 308bf7c, 13 findings) fixed in 065be67; round 5 (a, c, e on e37821c, 5 findings) fixed in 5aeef08; round 6 (e on 142320f, 3 findings) fixed in f718be2; every lens PASS (see Final verdicts)
+- [x] Independent reviewer (item 16): round 1 on fa5cdc8 (FAIL on item 11 only, one low finding) fixed in b565131; round 2 on 688aa8d PASS on every item
 
 ## Scorecard
 
@@ -40,10 +40,10 @@ Progress:
 | 13 | pyproject 1.0.0, Production/Stable | PASS |
 | 14 | sdist and wheel contents | PASS |
 | 15 | Gates each exit 0 | PASS: see Gates (last at ae28650) |
-| 16 | Independent reviewer | round 1: FAIL on item 11 (finding R1), fixed in b565131; re-review pending |
+| 16 | Independent reviewer | PASS: round 1 FAIL on item 11 (finding R1), fixed in b565131; round 2 on 688aa8d PASS on every item |
 | 17 | PR and trace guard | PR from `release/1.0.0`, trace guard CLEAN; merge and publish left to the maintainer |
 | 18 | Contracts bite (mutations) | PASS: author round of 30 mutants, all killed (one after a contract was added); M26 again and M31, M32 at ae28650, killed |
-| 19 | Five independent QA lenses | round 1: 21 findings, round 2: 11 findings, round 3: 1 finding, round 4: 13 findings, round 5: 5 findings, round 6: 3 findings, all fixed (see QA lenses); re-verification pending |
+| 19 | Five independent QA lenses | PASS: round 1: 21 findings, round 2: 11 findings, round 3: 1 finding, round 4: 13 findings, round 5: 5 findings, round 6: 3 findings, all fixed (see QA lenses); every lens PASS on its last round (see Final verdicts) |
 
 ## Name
 
@@ -428,3 +428,57 @@ Gates at b565131 on Elena's PC under a machine turn (CPython 3.14.2, a fresh clo
 branch and venv, fetched files present, `TIMINGHEADER_E2E=1`): `ruff format --check .`,
 `ruff check .`, `mypy --strict src`, `mypy --strict src tests` exit 0; `pytest`: 647
 passed, 32 skipped (browser tests and the network link checks, which run on request).
+
+### Independent reviewer, round 2
+
+The reviewer audited 688aa8d (a fresh clone from GitHub, upstream files fetched again: 174
+files ok). R1 is fixed: both new link tests failed with the fix undone and pass with it;
+with `TIMINGHEADER_LINKS=1` the only failures are the six `JaviLianes8/timingheader` URLs
+that answer 404 until the rename, and a simulation of the rename leaves no failure. Gates
+on Elena's PC under a machine turn (CPython 3.14.2, fresh venv, fetched files present,
+`TIMINGHEADER_E2E=1`): `ruff format --check .`, `ruff check .`, `mypy --strict src`,
+`mypy --strict src tests` exit 0, `pytest` 647 passed, 32 skipped. Verdict: PASS on every
+item, no finding.
+
+| # | Item | Result | Evidence |
+| --- | --- | --- | --- |
+| 1 | Public API stable | PASS | seven names, signatures unchanged, every 1.0.0 change in the CHANGELOG |
+| 2 | `__all__` exact | PASS | names without a leading underscore equal `__all__`; every name reports `timingheader` |
+| 3 | Docstrings with examples, doctests | PASS | 18 doctests pass on the installed wheel; README and GUIDE examples run in the suite |
+| 4 | Typed end to end | PASS | `mypy --strict src` and `mypy --strict src tests` exit 0; `py.typed` in the wheel |
+| 5 | Errors typed, bounded | PASS | `ServerTimingError` is a `ValueError` with `field` and `position`; short messages |
+| 6 | Contract tests | PASS | contract, API and QA suites green |
+| 7 | Real ground truth | PASS | MANIFEST with URL, revision, date, size, sha256, licence; re-fetched, 174 files ok |
+| 8 | Real e2e from the wheel | PASS | fresh venv, consumer from an empty folder with `-I`, command exit codes 0, 1 and 2; no PyPI release to upgrade from |
+| 9 | Seeded fuzz | PASS | fuzz and hostile input suites green |
+| 10 | Supported Pythons | PASS | 3.14.2 again; matrix 3.10.19 to 3.14.2t unchanged since no library code changed |
+| 11 | README, links, `twine check` | PASS | `twine check --strict` on both artifacts, absolute links, R1 fixed |
+| 12 | Dated CHANGELOG | PASS | `1.0.0 - 2026-10-20` |
+| 13 | pyproject | PASS | 1.0.0, Production/Stable, 3.10 to 3.14, MIT, project URLs, keywords, no runtime dependency |
+| 14 | sdist and wheel contents | PASS | no notes, fetched files or caches; LICENSE included |
+| 15 | Gates exit 0 | PASS | see above |
+| 16 | Independent reviewer | PASS | this round |
+| 17 | PR and trace guard | PASS | PR #3 open from `release/1.0.0`, guard clean; merge and publish are the maintainer's |
+| 18 | Contracts bite | PASS | author table above; a mutant of the new link extraction killed by both new tests |
+| 19 | Five QA lenses | PASS | see Final verdicts |
+
+## Final verdicts (item 19)
+
+Each lens reported PASS with no open finding on its last round. Reports are kept outside
+the repository.
+
+| Lens | Rounds | Final verdict | Report | Commit |
+| --- | --- | --- | --- | --- |
+| a: API and docs | 3 | PASS | `C:/Users/Havie/AppData/Local/Temp/claude/C--Windows-System32/d5a9d5eb-9af7-4445-8b03-788efd270378/scratchpad/servertiming-cert/lens-a-r3/REPORT.md` | 142320f |
+| b: correctness and ground truth | 2 | PASS | `C:/Users/Havie/AppData/Local/Temp/claude/C--Windows-System32/d5a9d5eb-9af7-4445-8b03-788efd270378/scratchpad/servertiming-cert/lens-b-r2/REPORT.md` | e37821c |
+| c: adversarial and robustness | 3 | PASS | `C:/Users/Havie/AppData/Local/Temp/claude/C--Windows-System32/d5a9d5eb-9af7-4445-8b03-788efd270378/scratchpad/servertiming-cert/lens-c-r3/REPORT.md` | 142320f |
+| d: packaging and real e2e | 1 | PASS | `C:/Users/Havie/AppData/Local/Temp/claude/C--Windows-System32/d5a9d5eb-9af7-4445-8b03-788efd270378/scratchpad/servertiming-cert/lens-d-r1/REPORT.md` | 308bf7c |
+| e: contract strength | 4 | PASS (13 mutants, all killed) | `C:/Users/Havie/AppData/Local/Temp/claude/C--Windows-System32/d5a9d5eb-9af7-4445-8b03-788efd270378/scratchpad/servertiming-cert/lens-e-r4/log-r4.txt` | fa5cdc8 |
+| Independent reviewer | 2 | PASS (every item) | `C:/Users/Havie/AppData/Local/Temp/claude/C--Windows-System32/d5a9d5eb-9af7-4445-8b03-788efd270378/scratchpad/servertiming-cert/review-r2/REPORT.md` | 688aa8d |
+
+Library code last changed at 5aeef08 (065be67 before it). Lenses a, c and e checked
+it on later commits; lens b's last round (e37821c) and lens d's (308bf7c) predate
+5aeef08, and lens a and lens c re-ran their probes on it on every interpreter from 3.10.19
+to 3.14.2t. 142320f..688aa8d changes only tests, the CHANGELOG and this report, and the
+reviewer's round 2 re-ran the full gate, the wheel build, `twine check --strict`, the
+wheel e2e and the installed suite on 688aa8d.
