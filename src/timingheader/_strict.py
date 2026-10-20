@@ -2,11 +2,24 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable
+
 from ._errors import ServerTimingError, shown
 from ._metric import Metric
 from ._number import is_valid_number
-from ._parse import metric_from_params
+from ._parse import field_list, metric_from_params, parse_lenient
 from ._syntax import OWS, TCHARS, is_quotable
+
+
+def parse_values(header: str | Iterable[str], *, strict: bool = False) -> list[Metric]:
+    """What ``timingheader.parse`` does; its annotations resolve in this module."""
+    fields = field_list(header)
+    if not strict:
+        return parse_lenient(fields)
+    metrics: list[Metric] = []
+    for index, field in enumerate(fields):
+        metrics.extend(parse_strict(field, index))
+    return metrics
 
 
 def parse_strict(text: str, field: int) -> list[Metric]:

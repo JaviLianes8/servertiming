@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable as _Iterable
+import functools as _functools
 from typing import TYPE_CHECKING as _TYPE_CHECKING
 
 from ._build import build
@@ -10,9 +10,7 @@ from ._collector import Timing
 from ._errors import ServerTimingError
 from ._measure import Measure, Timer
 from ._metric import Metric
-from ._parse import field_list as _field_list
-from ._parse import parse_lenient as _parse_lenient
-from ._strict import parse_strict as _parse_strict
+from ._strict import parse_values as _parse_values
 
 if _TYPE_CHECKING:
     from collections.abc import Iterable
@@ -62,15 +60,9 @@ def parse(header: str | Iterable[str], *, strict: bool = False) -> list[Metric]:
     >>> parse("db;dur=1, [x], a;DUR=2;dur=3", strict=False)[1].dur
     2.0
     """
-    fields = _field_list(header)
-    if not strict:
-        return _parse_lenient(fields)
-    metrics: list[Metric] = []
-    for index, field in enumerate(fields):
-        metrics.extend(_parse_strict(field, index))
-    return metrics
+    return _parse_values(header, strict=strict)
 
 
-# Resolved now: ``Iterable`` is not a name of the package, so the string annotation would
-# fail in typing.get_type_hints and inspect.signature(eval_str=True).
-parse.__annotations__["header"] = str | _Iterable[str]
+# ``Iterable`` is not a name of the package, so its annotations resolve where the work is
+# done: typing.get_type_hints and inspect.signature(eval_str=True) follow ``__wrapped__``.
+_functools.update_wrapper(parse, _parse_values, assigned=(), updated=())
