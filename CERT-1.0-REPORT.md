@@ -18,7 +18,7 @@ Progress:
 - [x] Gates (item 15)
 - [x] PR and trace guard (merge and publish, item 17, are the maintainer's)
 - [x] Project links moved to the new repository name (ae28650)
-- [ ] Five QA lenses (item 19): round 1 fixed in 45e91a9; round 2 (11 findings) fixed in 921ccf5 and 87f8cae; round 3 (b, d PASS; c one low finding, fixed in ae28650; a, e did not report); round 4 (a, b, c, e on 308bf7c, 13 findings) fixed in 065be67; round 5 (a, c, e on e37821c, 5 findings) fixed in 5aeef08; re-verification pending
+- [ ] Five QA lenses (item 19): round 1 fixed in 45e91a9; round 2 (11 findings) fixed in 921ccf5 and 87f8cae; round 3 (b, d PASS; c one low finding, fixed in ae28650; a, e did not report); round 4 (a, b, c, e on 308bf7c, 13 findings) fixed in 065be67; round 5 (a, c, e on e37821c, 5 findings) fixed in 5aeef08; round 6 (e on 142320f, 3 findings) fixed in the round 6 commit; re-verification pending
 - [ ] Independent reviewer (item 16, run after this stage)
 
 ## Scorecard
@@ -43,7 +43,7 @@ Progress:
 | 16 | Independent reviewer | pending (next stage) |
 | 17 | PR and trace guard | PR from `release/1.0.0`, trace guard CLEAN; merge and publish left to the maintainer |
 | 18 | Contracts bite (mutations) | PASS: author round of 30 mutants, all killed (one after a contract was added); M26 again and M31, M32 at ae28650, killed |
-| 19 | Five independent QA lenses | round 1: 21 findings, round 2: 11 findings, round 3: 1 finding, round 4: 13 findings, round 5: 5 findings, all fixed (see QA lenses); re-verification pending |
+| 19 | Five independent QA lenses | round 1: 21 findings, round 2: 11 findings, round 3: 1 finding, round 4: 13 findings, round 5: 5 findings, round 6: 3 findings, all fixed (see QA lenses); re-verification pending |
 
 ## Name
 
@@ -379,3 +379,24 @@ Gates at 5aeef08 on Elena's PC under a machine turn (CPython 3.14.2, a fresh clo
 pushed branch and venv, fetched files present, `TIMINGHEADER_E2E=1`): `ruff format
 --check .`, `ruff check .`, `mypy --strict src`, `mypy --strict src tests` exit 0;
 `pytest`: 641 passed, 33 skipped (browser tests and the link check, which run on request).
+
+### Round 6
+
+Lens e reviewed 142320f with a new sweep of 28 probes on the `int` duration branch of
+`Metric.__init__` and the params helpers next to it (Elena's PC, CPython 3.14, also with
+`TIMINGHEADER_E2E=1`). It confirmed its round 5 findings G1 to G4 killed and reported three
+surviving mutants, none equivalent. All three were missing contracts, not behaviour bugs:
+the library already did what the contract promises, so no code and no CHANGELOG line
+changed. Every finding was accepted; none is disputed.
+
+| Lens | Id | Finding | Fix |
+| --- | --- | --- | --- |
+| e | H1 (D05) | The hooked `int` subclass did not override `__int__`, so converting with `int(dur)` instead of `int.__index__(dur)` survived | `_HookedInt` in `tests/test_qa_metric_init.py` now also lies in `__int__` |
+| e | H2 (D17) | A zero `int` duration was only checked by equality, so keeping it as the `int` 0 survived | `test_a_zero_int_duration_is_stored_as_a_float`: `0`, a zero subclass and a zero hooked subclass give a `dur` that is exactly `float` and a `repr` showing `dur=0.0` |
+| e | H3 (P05) | A list used as a pair was not pinned as not a pair, so `_is_pair` accepting lists survived | `test_a_list_shaped_pair_is_not_a_pair`: `params=[["A", "1"]]` is stored unchanged, and both `param` and `build` raise the documented `TypeError` naming the list |
+
+Mutants re-run one at a time against the new tests on this PC (CPython 3.13.2): H1
+(`int(dur)`) is killed by `test_an_int_subclass_duration_is_stored_as_a_float[hooks]`,
+`[hooks-huge]` and `test_a_zero_int_duration_is_stored_as_a_float[hooks]`; H2 (`float(exact)
+if exact else 0`) by all three cases of `test_a_zero_int_duration_is_stored_as_a_float`; H3
+(`isinstance(pair, (tuple, list))`) by `test_a_list_shaped_pair_is_not_a_pair`.

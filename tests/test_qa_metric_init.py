@@ -24,6 +24,9 @@ class _HookedInt(int):
     def __index__(self) -> int:
         return 99
 
+    def __int__(self) -> int:
+        return 99
+
     def __gt__(self, other: object) -> bool:
         return True
 
@@ -61,6 +64,13 @@ def test_an_int_subclass_duration_is_stored_as_a_float(dur: int, expected: float
             build([metric])
 
 
+@pytest.mark.parametrize("zero", [0, _Int(0), _HookedInt(0)], ids=["int", "subclass", "hooks"])
+def test_a_zero_int_duration_is_stored_as_a_float(zero: int) -> None:
+    metric = Metric("a", zero)
+    assert type(metric.dur) is float and metric.dur == 0.0
+    assert repr(metric) == "Metric(name='a', dur=0.0, desc=None, params=())"
+
+
 def test_a_bool_duration_is_kept_for_build_to_refuse() -> None:
     metric = Metric("a", True)
     assert metric.dur is True
@@ -93,3 +103,13 @@ def test_param_on_params_that_are_not_a_tuple_raises_the_documented_error() -> N
     pairs = Metric("a", params={("k", "1")})  # type: ignore[arg-type]
     with pytest.raises(TypeError, match="params must hold"):
         pairs.param("k")
+
+
+def test_a_list_shaped_pair_is_not_a_pair() -> None:
+    metric = Metric("a", params=[["A", "1"]])  # type: ignore[list-item]
+    assert metric.params == (["A", "1"],)  # type: ignore[comparison-overlap]
+    message = r"params must hold \(name, value\) pairs, got \['A', '1'\]"
+    with pytest.raises(TypeError, match=message):
+        metric.param("a")
+    with pytest.raises(TypeError, match=message):
+        build([metric])
