@@ -121,3 +121,11 @@ def test_text_beyond_one_octet_is_read_but_never_written() -> None:
             build([metric])
         with pytest.raises(ServerTimingError):
             parse(f'a;desc="{char}"', strict=True)
+
+
+def test_a_huge_int_is_described_by_its_size_not_written_out() -> None:
+    for value in (10**60, 10**4400, -(10**100_000)):
+        with pytest.raises(ServerTimingError, match=r"got an int of \d+ bits$"):
+            build([Metric("a")], precision=value)
+    with pytest.raises(ServerTimingError, match="got " + "9" * 60 + "$"):
+        build([Metric("a")], precision=10**60 - 1)
