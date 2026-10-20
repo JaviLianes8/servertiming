@@ -16,8 +16,9 @@ class Metric:
     ``dur`` is ``None`` when the header gave no usable duration and ``desc`` is ``None``
     when it gave no description. ``params`` holds any other parameters in header order as
     ``(name, value)`` pairs; names are compared without regard to ASCII case and stored
-    with A to Z in lower case, and a list is stored as a tuple. An ``int`` duration is
-    stored as a ``float``, one beyond the range of a float as an infinity. Durations are
+    with A to Z in lower case, and a list is stored as a tuple. An ``int`` duration, a
+    subclass such as an ``IntEnum`` included, is stored as the ``float`` of its exact
+    value, one beyond the range of a float as an infinity; a ``bool`` is kept. Durations are
     milliseconds by convention. Nothing is validated here, because ``parse`` keeps what a
     browser keeps; ``build`` and ``str()`` check every part before writing it.
 
@@ -44,11 +45,14 @@ class Metric:
         # Parameter names are case-insensitive and durations are floats: normalising both
         # makes a metric equal to what parse reads back from its serialization. Values of
         # the wrong type are left alone for build to reject with a clear message.
-        if type(dur) is int:
+        if isinstance(dur, int) and not isinstance(dur, bool):
+            # The exact int value, so a subclass (an IntEnum, HTTPStatus) cannot steer the
+            # conversion through its own hooks.
+            exact = int.__index__(dur)
             try:
-                dur = float(dur)
+                dur = float(exact)
             except OverflowError:
-                dur = math.inf if dur > 0 else -math.inf
+                dur = math.inf if exact > 0 else -math.inf
         if isinstance(params, list):
             params = tuple(params)
         if isinstance(params, tuple) and all(_is_pair(pair) for pair in params):

@@ -95,9 +95,13 @@ This is the first release on PyPI.
   and `1e16` (they were written `1e-05` and `1e+16`). Both forms read back as the same
   double.
 - An `int` duration beyond the range of a float is stored in `Metric` as an infinity of
-  its sign, so `Metric.dur` and `Metric.duration` are always a `float` or `None` and
-  `repr(metric)` works (it kept the `int`; `repr` raised `ValueError` past 4300 digits).
+  its sign, so `Metric.dur` and `Metric.duration` are a `float` for every `int` duration
+  and `repr(metric)` works (it kept the `int`; `repr` raised `ValueError` past 4300 digits).
   `build` refuses it with `ServerTimingError`, as before.
+- A duration given as a subclass of `int` (an `IntEnum`, `http.HTTPStatus`) is stored in
+  `Metric` as the `float` of its exact value, as a plain `int` is, so its own methods
+  cannot change the value (it kept the subclass, and a huge one broke `repr`). A `bool`
+  is still kept for `build` to refuse.
 - The `Metric` constructor is typed to take `params` as a list of pairs as well as a
   tuple, as it always did at run time; the field stays a tuple.
 - `Metric.param` raises `TypeError` when `params` does not hold `(name, value)` pairs with
