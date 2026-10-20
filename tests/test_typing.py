@@ -41,7 +41,10 @@ def mypy_output(tmp_path_factory: pytest.TempPathFactory) -> str:
     target = folder / "snippet.py"
     target.write_text(SNIPPET, encoding="utf-8")
     config = folder / "mypy.ini"
-    config.write_text(f"[mypy]\nmypy_path = {SRC.as_posix()}\n", encoding="utf-8")
+    # From a checkout the package is read from src; from an sdist without src, mypy finds
+    # the installed package through its py.typed marker.
+    path = f"mypy_path = {SRC.as_posix()}\n" if SRC.is_dir() else ""
+    config.write_text(f"[mypy]\n{path}", encoding="utf-8")
     cache = str(folder / "cache")
     args = ["--strict", "--config-file", str(config), "--cache-dir", cache, str(target)]
     try:
