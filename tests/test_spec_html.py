@@ -5,7 +5,7 @@ number values are located in the fetched HTML source (URL and sha256 in
 tests/upstream/MANIFEST.json, fetched 2026-10-20). ``_reference`` below is an
 independent transcription of those steps, written by hand from that text in exact
 rational arithmetic, step by step; it shares no code with the library. The two are
-compared on every string of up to four characters over the characters the steps look at,
+compared on every string of up to five characters over the characters the steps look at,
 and on seeded longer strings.
 """
 
@@ -89,10 +89,10 @@ def _reference(text: str) -> float | None:
         power = exponent * int(text[start:pos])
         # Past these bounds the exact value is certain to overflow or to round to zero, so
         # the huge power need not be built (the significand here has at most 200 digits).
-        if value and power > 1000:
-            return None
-        if power < -1000:
+        if not value or power < -1000:
             return 0.0
+        if power > 1000:
+            return None
         value *= Fraction(10) ** power
     return _convert(value)
 
@@ -142,7 +142,7 @@ def test_the_steps_transcribed_are_in_the_fetched_text(html_rules: str) -> None:
         assert step in html_rules, step
 
 
-@pytest.mark.parametrize("length", [0, 1, 2, 3, 4])
+@pytest.mark.parametrize("length", [0, 1, 2, 3, 4, 5])
 def test_every_short_string_reads_as_the_steps_say(length: int) -> None:
     for chars in itertools.product(ALPHABET, repeat=length):
         text = "".join(chars)
