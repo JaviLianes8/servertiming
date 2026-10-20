@@ -465,16 +465,16 @@ item, no finding.
 ## Final verdicts (item 19)
 
 Each lens reported PASS with no open finding on its last round. Reports are kept outside
-the repository.
+the repository, in the maintainer's `servertiming-cert` work folder.
 
 | Lens | Rounds | Final verdict | Report | Commit |
 | --- | --- | --- | --- | --- |
-| a: API and docs | 3 | PASS | `C:/Users/Havie/AppData/Local/Temp/claude/C--Windows-System32/d5a9d5eb-9af7-4445-8b03-788efd270378/scratchpad/servertiming-cert/lens-a-r3/REPORT.md` | 142320f |
-| b: correctness and ground truth | 2 | PASS | `C:/Users/Havie/AppData/Local/Temp/claude/C--Windows-System32/d5a9d5eb-9af7-4445-8b03-788efd270378/scratchpad/servertiming-cert/lens-b-r2/REPORT.md` | e37821c |
-| c: adversarial and robustness | 3 | PASS | `C:/Users/Havie/AppData/Local/Temp/claude/C--Windows-System32/d5a9d5eb-9af7-4445-8b03-788efd270378/scratchpad/servertiming-cert/lens-c-r3/REPORT.md` | 142320f |
-| d: packaging and real e2e | 1 | PASS | `C:/Users/Havie/AppData/Local/Temp/claude/C--Windows-System32/d5a9d5eb-9af7-4445-8b03-788efd270378/scratchpad/servertiming-cert/lens-d-r1/REPORT.md` | 308bf7c |
-| e: contract strength | 4 | PASS (13 mutants, all killed) | `C:/Users/Havie/AppData/Local/Temp/claude/C--Windows-System32/d5a9d5eb-9af7-4445-8b03-788efd270378/scratchpad/servertiming-cert/lens-e-r4/log-r4.txt` | fa5cdc8 |
-| Independent reviewer | 2 | PASS (every item) | `C:/Users/Havie/AppData/Local/Temp/claude/C--Windows-System32/d5a9d5eb-9af7-4445-8b03-788efd270378/scratchpad/servertiming-cert/review-r2/REPORT.md` | 688aa8d |
+| a: API and docs | 3 | PASS | `servertiming-cert/lens-a-r3/REPORT.md` | 142320f |
+| b: correctness and ground truth | 2 | PASS | `servertiming-cert/lens-b-r2/REPORT.md` | e37821c |
+| c: adversarial and robustness | 3 | PASS | `servertiming-cert/lens-c-r3/REPORT.md` | 142320f |
+| d: packaging and real e2e | 1 | PASS | `servertiming-cert/lens-d-r1/REPORT.md` | 308bf7c |
+| e: contract strength | 4 | PASS (13 mutants, all killed) | `servertiming-cert/lens-e-r4/log-r4.txt` | fa5cdc8 |
+| Independent reviewer | 2 | PASS (every item) | `servertiming-cert/review-r2/REPORT.md` | 688aa8d |
 
 Library code last changed at 5aeef08 (065be67 before it). Lenses a, c and e checked
 it on later commits; lens b's last round (e37821c) and lens d's (308bf7c) predate
