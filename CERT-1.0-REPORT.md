@@ -19,7 +19,7 @@ Progress:
 - [x] PR and trace guard (merge and publish, item 17, are the maintainer's)
 - [x] Project links moved to the new repository name (ae28650)
 - [ ] Five QA lenses (item 19): round 1 fixed in 45e91a9; round 2 (11 findings) fixed in 921ccf5 and 87f8cae; round 3 (b, d PASS; c one low finding, fixed in ae28650; a, e did not report); round 4 (a, b, c, e on 308bf7c, 13 findings) fixed in 065be67; round 5 (a, c, e on e37821c, 5 findings) fixed in 5aeef08; round 6 (e on 142320f, 3 findings) fixed in f718be2; re-verification pending
-- [ ] Independent reviewer (item 16, run after this stage)
+- [ ] Independent reviewer (item 16): round 1 on fa5cdc8 (FAIL on item 11 only, one low finding) fixed in b565131; re-review pending
 
 ## Scorecard
 
@@ -35,12 +35,12 @@ Progress:
 | 8 | Real e2e from the wheel | PASS: built wheel installed in a throwaway venv, used from an empty folder, command driven by subprocess; no PyPI release to upgrade from |
 | 9 | Seeded fuzz, no crash, hang or blowup | PASS |
 | 10 | Supported Pythons | PASS: CPython 3.10.19, 3.11.5, 3.12.12, 3.13.2, 3.14.2, 3.14.2t (all again at ae28650); 3.8.20 and 3.9.25 refused by `requires-python` |
-| 11 | README and `twine check` | PASS: `twine check --strict`, absolute links, badge |
+| 11 | README and `twine check` | PASS: `twine check --strict`, absolute links, badge; the link check no longer keeps sentence punctuation (reviewer round 1, b565131) |
 | 12 | Dated CHANGELOG section | PASS: 1.0.0, 2026-10-20 (the date of the 1.0.0 commits; the maintainer re-dates it if the release is published later); 0.2.0 and 0.1.0 dated from their commits |
 | 13 | pyproject 1.0.0, Production/Stable | PASS |
 | 14 | sdist and wheel contents | PASS |
 | 15 | Gates each exit 0 | PASS: see Gates (last at ae28650) |
-| 16 | Independent reviewer | pending (next stage) |
+| 16 | Independent reviewer | round 1: FAIL on item 11 (finding R1), fixed in b565131; re-review pending |
 | 17 | PR and trace guard | PR from `release/1.0.0`, trace guard CLEAN; merge and publish left to the maintainer |
 | 18 | Contracts bite (mutations) | PASS: author round of 30 mutants, all killed (one after a contract was added); M26 again and M31, M32 at ae28650, killed |
 | 19 | Five independent QA lenses | round 1: 21 findings, round 2: 11 findings, round 3: 1 finding, round 4: 13 findings, round 5: 5 findings, round 6: 3 findings, all fixed (see QA lenses); re-verification pending |
@@ -405,3 +405,26 @@ Gates at f718be2 on Elena's PC under a machine turn (CPython 3.14.2, a fresh clo
 branch and venv, fetched files present, `TIMINGHEADER_E2E=1`): `ruff format --check .`,
 `ruff check .`, `mypy --strict src`, `mypy --strict src tests` exit 0; `pytest`: 645
 passed, 33 skipped (browser tests and the link check, which run on request).
+
+### Independent reviewer, round 1
+
+The independent reviewer (item 16) audited fa5cdc8 against the 19 items: every item PASS
+except item 11, with item 17 pending merge. One low finding, accepted and fixed in b565131;
+none is disputed. It is a defect of the release check, not of the library: no library code
+changed and no behaviour line was added to the CHANGELOG.
+
+| Id | Finding | Fix |
+| --- | --- | --- |
+| R1 | `tests/test_links.py` kept the sentence punctuation after a URL, so the CHANGELOG line "project links point at https://github.com/JaviLianes8/timingheader." added the URL with the full stop, which answers 404 even after the rename: the post-rename link run set as the publish condition could never pass | URLs are extracted by `_extract`, which strips trailing `.,;:!?'`; two ungated tests run on every `pytest`: `test_sentence_punctuation_after_a_url_is_not_part_of_it` (a synthetic text) and `test_no_checked_url_ends_in_punctuation` (the real README, GUIDE, CHANGELOG and pyproject). Only the network tests stay behind `TIMINGHEADER_LINKS=1`. The CHANGELOG line now writes the URL as `<https://github.com/JaviLianes8/timingheader>.` |
+
+Both new tests failed on fa5cdc8 (the extracted set held
+`https://github.com/JaviLianes8/timingheader.`) and pass at b565131. With
+`TIMINGHEADER_LINKS=1` at b565131 on this PC: 16 passed, 6 failed, the six being the
+`JaviLianes8/timingheader` links that answer 404 until the repository is renamed; the same
+six URLs with the current name `servertiming` answer 200 today. After the rename,
+`TIMINGHEADER_LINKS=1 pytest tests/test_links.py` must be all green before publishing.
+
+Gates at b565131 on Elena's PC under a machine turn (CPython 3.14.2, a fresh clone of the
+branch and venv, fetched files present, `TIMINGHEADER_E2E=1`): `ruff format --check .`,
+`ruff check .`, `mypy --strict src`, `mypy --strict src tests` exit 0; `pytest`: 647
+passed, 32 skipped (browser tests and the network link checks, which run on request).
