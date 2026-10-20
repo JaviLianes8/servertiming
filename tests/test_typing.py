@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -50,11 +51,13 @@ def mypy_output(tmp_path_factory: pytest.TempPathFactory) -> str:
     try:
         from mypy import api
     except ImportError:
-        # The interpreter running pytest may lack mypy while the one on PATH has it.
+        # The interpreter running pytest may lack mypy while the one on PATH has it; that
+        # mypy then reads the packages installed for this interpreter.
         program = shutil.which("mypy")
         if program is None:
             pytest.skip("mypy is not installed")
-        result = subprocess.run([program, *args], capture_output=True, text=True, check=False)
+        command = [program, "--python-executable", sys.executable, *args]
+        result = subprocess.run(command, capture_output=True, text=True, check=False)
         return result.stdout + result.stderr
     out, err, _ = api.run(args)
     return str(out) + str(err)
