@@ -1,4 +1,4 @@
-# servertiming improvement round
+# timingheader improvement round
 
 Progress:
 - [x] Brainstorm ranked improvements (this file)
@@ -94,7 +94,7 @@ WPT corpus and the prose; the differences are listed in the README.
    as a context manager and as a decorator for plain and `async` functions (the time spent
    awaiting is counted, not just the coroutine creation); `start()` returns a `Timer` for
    work spread over callbacks; the default clock is `time.perf_counter` (monotonic).
-8. **Command line checker.** `servertiming 'db;dur=53'` (or lines on stdin, as copied from
+8. **Command line checker.** `timingheader 'db;dur=53'` (or lines on stdin, as copied from
    `curl -i`) prints the metrics and exits non-zero when the value breaks the grammar.
 9. **Contracts.** WPT corpus as a local test, cited spec examples, a seeded round trip
    (`parse(build(m), strict=True) == m`), README examples executed, typing checked with

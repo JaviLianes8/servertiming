@@ -24,7 +24,7 @@ _HEADER_LINE = re.compile(r"HTTP/|[!#$%&'*+.^_`|~0-9A-Za-z-]+:")
 def main(argv: Sequence[str] | None = None, stdin: TextIO | None = None) -> int:
     """Run the command; returns 0 when every value is valid, 1 when not, 2 for no value."""
     parser = argparse.ArgumentParser(
-        prog="servertiming",
+        prog="timingheader",
         description="Show the metrics in Server-Timing values and check them against the "
         "grammar. With no VALUE, lines are read from stdin; given response headers (as "
         "from curl -sI), only the Server-Timing fields are used.",

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from servertiming import Metric, ServerTimingError, build
+from timingheader import Metric, ServerTimingError, build
 
 
 def test_build_a_single_bare_metric() -> None:

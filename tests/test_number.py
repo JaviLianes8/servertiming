@@ -8,7 +8,7 @@ import math
 
 import pytest
 
-from servertiming._number import format_number, is_valid_number, parse_number
+from timingheader._number import format_number, is_valid_number, parse_number
 
 READ = [
     ("123.4", 123.4),

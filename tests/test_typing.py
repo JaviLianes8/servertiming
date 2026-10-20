@@ -12,7 +12,7 @@ import pytest
 SRC = Path(__file__).resolve().parents[1] / "src"
 
 SNIPPET = """
-from servertiming import Metric, Timing, build, parse
+from timingheader import Metric, Timing, build, parse
 timing = Timing()
 reveal_type(parse("db"))
 reveal_type(parse(["db", "x"], strict=True)[0].dur)
@@ -60,12 +60,12 @@ def mypy_output(tmp_path_factory: pytest.TempPathFactory) -> str:
 def test_functions_return_the_documented_types(mypy_output: str) -> None:
     lines = (4, 5, 6, 7, 8, 9, 13, 16)
     assert [_revealed(mypy_output, line) for line in lines] == [
-        "list[servertiming._metric.Metric]",
+        "list[timingheader._metric.Metric]",
         "float | None",
         "tuple[tuple[str, str], ...]",
         "float",
         "str",
-        "servertiming._metric.Metric",
+        "timingheader._metric.Metric",
         "def (x: int) -> str",
         "def () -> Coroutine[Any, Any, bytes]",
     ]

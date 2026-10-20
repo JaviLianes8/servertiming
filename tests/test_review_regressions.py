@@ -8,8 +8,8 @@ import threading
 
 import pytest
 
-from servertiming import Metric, ServerTimingError, Timing, build, parse
-from servertiming._cli import fields_from_lines, main
+from timingheader import Metric, ServerTimingError, Timing, build, parse
+from timingheader._cli import fields_from_lines, main
 
 
 def test_parameter_names_round_trip_whatever_their_case() -> None:

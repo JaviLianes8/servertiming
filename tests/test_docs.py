@@ -7,8 +7,8 @@ import io
 import re
 from pathlib import Path
 
-import servertiming
-from servertiming._cli import main
+import timingheader
+from timingheader._cli import main
 
 ROOT = Path(__file__).resolve().parents[1]
 README = (ROOT / "README.md").read_text(encoding="utf-8")
@@ -51,7 +51,7 @@ def test_every_print_in_the_readme_shows_its_output() -> None:
 
 def test_the_command_line_example_prints_what_the_readme_shows() -> None:
     shell = README.split("## Command line", 1)[1].split("```", 2)[1]
-    command = "$ servertiming 'db;dur=53, cache;desc=\"Cache Read\";dur=23.2'\n"
+    command = "$ timingheader 'db;dur=53, cache;desc=\"Cache Read\";dur=23.2'\n"
     shown = shell.split(command, 1)[1].split("$ ", 1)[0].splitlines()
     out = io.StringIO()
     with contextlib.redirect_stdout(out):
@@ -61,7 +61,7 @@ def test_the_command_line_example_prints_what_the_readme_shows() -> None:
 
 def test_the_api_table_lists_every_public_name() -> None:
     table = README.split("## API", 1)[1].split("\n## ", 1)[0]
-    for name in servertiming.__all__:
+    for name in timingheader.__all__:
         assert f"`{name}" in table, name
 
 
@@ -69,12 +69,12 @@ def test_version_matches_pyproject() -> None:
     text = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
     match = re.search(r'^version = "([^"]+)"$', text, flags=re.MULTILINE)
     assert match is not None
-    assert match.group(1) == servertiming.__version__
+    assert match.group(1) == timingheader.__version__
 
 
 def test_changelog_has_an_entry_for_this_version() -> None:
     text = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
-    assert f"## [{servertiming.__version__}]" in text
+    assert f"## [{timingheader.__version__}]" in text
 
 
 def _tracked_text_files() -> list[Path]:

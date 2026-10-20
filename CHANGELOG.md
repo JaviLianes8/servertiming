@@ -34,7 +34,7 @@ All notable changes to this project are documented here. The format follows
   `str(metric)`.
 - `build(..., precision=n)` and `Timing.header(precision=n)` round durations.
 - `Timing.measure` decorates plain and `async` functions; `Timing.start` returns a `Timer`.
-- The `servertiming` command shows and checks values from arguments or response headers.
+- The `timingheader` command shows and checks values from arguments or response headers.
 
 ## [0.1.0]
 

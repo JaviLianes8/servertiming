@@ -3,7 +3,7 @@ three Server-Timing header lines and one trailer, and the six metrics they carry
 
 from __future__ import annotations
 
-from servertiming import Metric, parse
+from timingheader import Metric, parse
 
 HEADERS = [
     "miss, db;dur=53, app;dur=47.2",

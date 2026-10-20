@@ -1,4 +1,4 @@
-"""Run the command line checker: ``python -m servertiming``."""
+"""Run the command line checker: ``python -m timingheader``."""
 
 from __future__ import annotations
 

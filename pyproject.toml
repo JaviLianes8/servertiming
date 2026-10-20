@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "servertiming"
+name = "timingheader"
 version = "0.2.0"
 description = "Build, parse and validate the HTTP Server-Timing header the way browsers read it, with timing helpers"
 readme = "README.md"
@@ -30,25 +30,25 @@ classifiers = [
 dependencies = []
 
 [project.optional-dependencies]
-dev = ["ruff", "mypy", "pytest", "build", "twine"]
+dev = ["ruff", "mypy", "pytest", "pytest-timeout", "build", "twine"]
 
 [project.scripts]
-servertiming = "servertiming._cli:main"
+timingheader = "timingheader._cli:main"
 
 [project.urls]
 Homepage = "https://lianes8studio.com"
-Repository = "https://github.com/JaviLianes8/servertiming"
-Issues = "https://github.com/JaviLianes8/servertiming/issues"
-Changelog = "https://github.com/JaviLianes8/servertiming/blob/main/CHANGELOG.md"
+Source = "https://github.com/JaviLianes8/timingheader"
+Issues = "https://github.com/JaviLianes8/timingheader/issues"
+Changelog = "https://github.com/JaviLianes8/timingheader/blob/main/CHANGELOG.md"
 LinkedIn = "https://www.linkedin.com/in/jlianes/"
 Funding = "https://buymeacoffee.com/jlianesglrs"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/servertiming"]
+packages = ["src/timingheader"]
 
 [tool.hatch.build.targets.sdist]
 # Third-party test files are fetched locally and never shipped; only their manifest is.
-exclude = ["IMPROVEMENTS-round*.md", "tests/upstream/wpt-parsing"]
+exclude = ["IMPROVEMENTS-round*.md", "CERT-1.0-*.md", "tests/upstream/*", "!tests/upstream/MANIFEST.json"]
 
 [tool.ruff]
 line-length = 100
@@ -63,6 +63,7 @@ strict = true
 mypy_path = "src"
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+testpaths = ["src", "tests"]
 pythonpath = ["src"]
-addopts = "-q"
+addopts = "-q --doctest-modules"
+timeout = 300
