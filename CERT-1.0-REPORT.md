@@ -18,7 +18,7 @@ Progress:
 - [x] Gates (item 15)
 - [x] PR and trace guard (merge and publish, item 17, are the maintainer's)
 - [x] Project links moved to the new repository name (ae28650)
-- [ ] Five QA lenses (item 19): round 1 fixed in 45e91a9; round 2 (11 findings) fixed in 921ccf5 and 87f8cae; round 3 (b, d PASS; c one low finding, fixed in ae28650; a, e did not report); round 4 (a, b, c, e on 308bf7c, 13 findings) fixed in 065be67; re-verification pending
+- [ ] Five QA lenses (item 19): round 1 fixed in 45e91a9; round 2 (11 findings) fixed in 921ccf5 and 87f8cae; round 3 (b, d PASS; c one low finding, fixed in ae28650; a, e did not report); round 4 (a, b, c, e on 308bf7c, 13 findings) fixed in 065be67; round 5 (a, c, e on e37821c, 5 findings) fixed in 5aeef08; re-verification pending
 - [ ] Independent reviewer (item 16, run after this stage)
 
 ## Scorecard
@@ -43,7 +43,7 @@ Progress:
 | 16 | Independent reviewer | pending (next stage) |
 | 17 | PR and trace guard | PR from `release/1.0.0`, trace guard CLEAN; merge and publish left to the maintainer |
 | 18 | Contracts bite (mutations) | PASS: author round of 30 mutants, all killed (one after a contract was added); M26 again and M31, M32 at ae28650, killed |
-| 19 | Five independent QA lenses | round 1: 21 findings, round 2: 11 findings, round 3: 1 finding, round 4: 13 findings, all fixed (see QA lenses); re-verification pending |
+| 19 | Five independent QA lenses | round 1: 21 findings, round 2: 11 findings, round 3: 1 finding, round 4: 13 findings, round 5: 5 findings, all fixed (see QA lenses); re-verification pending |
 
 ## Name
 
@@ -348,3 +348,34 @@ branch, a fresh venv, fetched files present, `TIMINGHEADER_E2E=1`): `ruff format
 passed, 33 skipped (browser tests and the link check, which run on request). The changed
 areas (new contracts, API contract, typing, doctests) also pass on CPython 3.10.19 on this
 PC; the full interpreter matrix is for the lens d re-check.
+
+### Round 5
+
+Lenses a, c and e reviewed e37821c. Lens c confirmed its round 4 findings F1 to F5 fixed
+(F2 for a plain `int`), and lens e confirmed its F1 (N11) and F2 (N21) killed. Every new
+finding was accepted and fixed in 5aeef08; none is disputed. The behaviour fix has a
+contract test that failed on e37821c before the fix (`tests/test_qa_metric_init.py`, 8
+cases red), and the behaviour change is in the CHANGELOG.
+
+| Lens | Id | Finding | Fix |
+| --- | --- | --- | --- |
+| a, c | G1, N1 | `Metric` turned only an exact `int` duration into a `float`: an `int` subclass (`IntEnum`, `http.HTTPStatus`, a user subclass) was kept, so `dur` and `duration` were not a `float`, and a huge one made `repr` raise `ValueError` | Every `int` but a `bool` is stored as the `float` of `int.__index__(dur)`, its exact value, with the same rule of an infinity of its sign beyond the float range; a `bool` is kept for `build` to refuse. The subclass's own `__float__`, `__index__`, `__gt__` and `__repr__` are never used. Docstring, GUIDE and CHANGELOG say so, and the CHANGELOG line on huge `int` durations now says a `float` for every `int` duration. Contract: `HTTPStatus.OK`, an `IntEnum`, plain and hooked subclasses, huge positive and negative ones: `dur` and `duration` are exactly `float`, `repr` is exact, `build` writes or refuses as for a plain `int`; a `bool` is kept and refused |
+| e | G1 (M03) | The order in which an out-of-order exit rebuilds the entries above it was not checked | `test_qa_nesting.py`: an outer block exits under two entries, one `Measure` entered twice; every duration of the header asserted |
+| e | G2 (Q07) | Params mixing pairs and other items were not pinned as stored unchanged | Lists and tuples mixing a pair with an `int`, a triple or `None` are stored as they are |
+| e | G3 (Q08) | The non-tuple guard of `Metric.param` was not tested | `params=None` raises the documented `TypeError` naming `None`; a set of pairs raises `TypeError` |
+| e | G4 (Q12) | Case-insensitive lookup on params that were not normalised was not tested | `param("a")` and `param("A")` find `("A", "1")` before a bad item; a missing name then reaches the bad item and raises |
+
+Mutants re-run one at a time against the new tests on this PC (CPython 3.13.2): lens e's
+M03 (`reversed` dropped) is killed by
+`test_qa_nesting.py::test_an_outer_exit_keeps_the_order_of_the_entries_above_it`, Q07
+(`all` to `any`) by `test_params_mixing_pairs_and_other_items_are_stored_unchanged[int]`,
+Q08 (guard removed) by `test_param_on_params_that_are_not_a_tuple_raises_the_documented_error`
+and Q12 (case-sensitive compare) by
+`test_param_matches_any_case_before_reaching_an_item_that_is_not_a_pair`. Two mutants of
+the new code are killed too: the old `type(dur) is int` test (by the `httpstatus` case)
+and converting the subclass itself instead of its exact value (by the `hooks` case).
+
+Gates at 5aeef08 on Elena's PC under a machine turn (CPython 3.14.2, a fresh clone of the
+pushed branch and venv, fetched files present, `TIMINGHEADER_E2E=1`): `ruff format
+--check .`, `ruff check .`, `mypy --strict src`, `mypy --strict src tests` exit 0;
+`pytest`: 641 passed, 33 skipped (browser tests and the link check, which run on request).
