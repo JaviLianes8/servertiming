@@ -18,7 +18,7 @@ Progress:
 - [x] Gates (item 15)
 - [x] PR and trace guard (merge and publish, item 17, are the maintainer's)
 - [x] Project links moved to the new repository name (ae28650)
-- [ ] Five QA lenses (item 19): round 1 fixed in 45e91a9; round 2 (11 findings) fixed in 921ccf5 and 87f8cae; round 3 (b, d PASS; c one low finding, fixed in ae28650; a, e did not report) re-verification pending
+- [ ] Five QA lenses (item 19): round 1 fixed in 45e91a9; round 2 (11 findings) fixed in 921ccf5 and 87f8cae; round 3 (b, d PASS; c one low finding, fixed in ae28650; a, e did not report); round 4 (a, b, c, e on 308bf7c, 13 findings) fixed in 065be67; re-verification pending
 - [ ] Independent reviewer (item 16, run after this stage)
 
 ## Scorecard
@@ -27,7 +27,7 @@ Progress:
 | --- | --- | --- |
 | 1 | Public API reviewed for stability | PASS: seven names kept from 0.2.0, signatures pinned by `tests/test_contract_api.py`; every change in CHANGELOG and GUIDE |
 | 2 | `__all__` exact, no private imports in docs | PASS |
-| 3 | Docstrings with runnable examples, doctests | PASS: 16 doctests; README (9 outputs) and GUIDE (11) examples run as tests |
+| 3 | Docstrings with runnable examples, doctests | PASS: 18 doctests (every public function, method and property); README (9 outputs) and GUIDE (11) examples run as tests, and type-check under `mypy --strict` as consumer code |
 | 4 | Typed end to end | PASS: `mypy --strict src tests`, `py.typed`, typing checked from a consumer snippet, also against the installed wheel |
 | 5 | Typed, documented, bounded errors | PASS: `ServerTimingError` (a `ValueError`) with `position` and `field`, `TypeError` for wrong types, messages quote at most 60 characters |
 | 6 | Contract tests of every public name | PASS |
@@ -36,14 +36,14 @@ Progress:
 | 9 | Seeded fuzz, no crash, hang or blowup | PASS |
 | 10 | Supported Pythons | PASS: CPython 3.10.19, 3.11.5, 3.12.12, 3.13.2, 3.14.2, 3.14.2t (all again at ae28650); 3.8.20 and 3.9.25 refused by `requires-python` |
 | 11 | README and `twine check` | PASS: `twine check --strict`, absolute links, badge |
-| 12 | Dated CHANGELOG section | PASS: 1.0.0, 2026-10-19 |
+| 12 | Dated CHANGELOG section | PASS: 1.0.0, 2026-10-20 (the date of the 1.0.0 commits; the maintainer re-dates it if the release is published later); 0.2.0 and 0.1.0 dated from their commits |
 | 13 | pyproject 1.0.0, Production/Stable | PASS |
 | 14 | sdist and wheel contents | PASS |
 | 15 | Gates each exit 0 | PASS: see Gates (last at ae28650) |
 | 16 | Independent reviewer | pending (next stage) |
 | 17 | PR and trace guard | PR from `release/1.0.0`, trace guard CLEAN; merge and publish left to the maintainer |
 | 18 | Contracts bite (mutations) | PASS: author round of 30 mutants, all killed (one after a contract was added); M26 again and M31, M32 at ae28650, killed |
-| 19 | Five independent QA lenses | round 1: 21 findings, round 2: 11 findings, round 3: 1 finding, all fixed (see QA lenses); re-verification pending |
+| 19 | Five independent QA lenses | round 1: 21 findings, round 2: 11 findings, round 3: 1 finding, round 4: 13 findings, all fixed (see QA lenses); re-verification pending |
 
 ## Name
 
@@ -312,3 +312,39 @@ the wheel installed in a fresh venv, the sdist's suite with `src` removed and th
 files present, then the installed package's doctests): CPython 3.10.19, 3.11.5 and 3.12.12
 577 passed, 3.13.2, 3.14.2 and 3.14.2t 578 passed (34 skipped each), 16 doctests each;
 3.8.20 and 3.9.25 refuse the install (`requires-python >=3.10`).
+
+### Round 4
+
+Lenses a, b, c and e reviewed 308bf7c. Every finding was accepted and fixed in 065be67;
+none is disputed. Each behaviour fix has a contract test that failed on 308bf7c before
+the fix (`tests/test_qa_values.py`, `tests/test_qa_nesting.py`,
+`tests/test_qa_doc_typing.py`), and every behaviour change is in the CHANGELOG.
+
+| Lens | Id | Finding | Fix |
+| --- | --- | --- | --- |
+| a | F1 | `Metric.params` was typed as a tuple only, so the `Metric` docstring example with a list failed `mypy --strict` as consumer code | `Metric` has an explicit constructor whose `params` takes a tuple or a list of pairs; the field stays a tuple (the dataclass fields, defaults, equality, hashing and pickling are unchanged). Contract `test_qa_doc_typing.py`: every doctest and every README and GUIDE python block is type-checked as consumer code under `mypy --strict` (red on 308bf7c on the `Metric` example) |
+| a | F2 | README and the `build` docstring said any control character is refused; tab is allowed | Both say "a control character other than tab" |
+| a | F3 | The 0.2.0 section named the command `timingheader` | Restored to `servertiming`, the name it had at 0.2.0 |
+| a | F4 | 1.0.0 dated 2026-10-19, older sections undated, bracketed versions without link definitions, `dir()` claim literally false | 1.0.0 dated 2026-10-20, 0.2.0 2026-10-13 and 0.1.0 2026-10-12 (their commits), brackets dropped; the claim now says the names without a leading underscore are exactly `__all__` (what the contract checks) |
+| a | F5 | `Timer.stop` and `Timer.running` had no runnable example | Both have one. `Timer` moved to `_timer.py` so every file stays under 200 lines; it still reports `timingheader` as its module |
+| a | N1, N2 | Notes, not counted | N1: the `timingheader` URLs are to be re-checked after the rename (`tests/test_links.py`), unchanged. N2: left as is; `Timer` takes `desc` before `start`, so a default for `desc` would only fit `Measure`, and the GUIDE documents both constructors |
+| b | B1 | Durations were said to be written in the shortest form, but repr pads the exponent (`1e-05`, `1e+16`) | `format_number` writes the exponent without a plus sign or leading zeros (`1e-5`, `1e16`, `1.5e-7`); GUIDE and docstring say "the shortest digits that read back as the same double (Python's `repr`)". Contract: those values build to the short form and strict-parse back equal |
+| c | F1 | Nested `Measure` blocks and blocks left open cost quadratic time (the running tuple was copied on every enter and exit) | The running entries are a persistent linked stack of `(entry, rest)` pairs: enter and the innermost exit are constant time, an out-of-order exit rebuilds only the entries above it. Contracts: 8 times the depth stays under 24 times the time (it was about 47 to 60), 40,000 open entries leave later blocks under 5 times slower (it was about 110), and an out-of-order exit with an entry left open still records both blocks |
+| c | F2 | An `int` duration beyond the float range stayed an `int`: `repr` raised `ValueError`, `duration` returned an `int` | Stored as an infinity of its sign, as the docstring now says; `repr` and `duration` work and `build` refuses it with `ServerTimingError` |
+| c | F3 | `Metric.param` raised `ValueError` or `AttributeError` for malformed `params` | `TypeError` ("params must hold (name, value) pairs"), documented |
+| c | F4 | A `precision` that subclasses `int` could get around the 0 to 20 range check | `build` (and so `Timing.header`) works on `int.__index__(precision)`, a plain `int`, for the check and the format |
+| c | F5 | `shown()` called `abs` and `bit_length` on the object, so an `int` subclass hook replaced the documented `TypeError` | `int.__abs__` and `int.bit_length` are called directly |
+| e | F1 | No test of a header line folded with a tab (mutant N11 survived) | Subprocess test with a tab, a space and a space plus tab continuation, and a direct `fields_from_lines` case |
+| e | F2 | The `TypeError` message for a non-`str` metric or parameter name was not pinned (N21 survived) | Exact messages pinned for `build`, a parameter name, `Timing.add` and `Timing.measure` |
+
+Mutants re-run one at a time against the new tests on this PC: lens e's N11 (folding
+only on a space) is killed by `test_qa_cli.py::test_a_line_folded_with_a_tab_or_a_space_continues_the_field`,
+and N21 (`check_token` type guard removed) by
+`test_qa_values.py::test_a_name_that_is_not_a_str_is_named_in_the_type_error`.
+
+Gates at 065be67 on the laptop under a machine turn (CPython 3.14.6, a clone of the
+branch, a fresh venv, fetched files present, `TIMINGHEADER_E2E=1`): `ruff format --check .`,
+`ruff check .`, `mypy --strict src`, `mypy --strict src tests` exit 0; `pytest`: 626
+passed, 33 skipped (browser tests and the link check, which run on request). The changed
+areas (new contracts, API contract, typing, doctests) also pass on CPython 3.10.19 on this
+PC; the full interpreter matrix is for the lens d re-check.
