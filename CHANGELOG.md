@@ -57,6 +57,8 @@ This is the first release on PyPI.
 ### Added
 
 - Every public name has a docstring with a runnable example.
+- A guide (`GUIDE.md`) describing every rule, and the differences measured between real
+  browsers on malformed headers.
 
 ## [0.2.0]
 

@@ -58,6 +58,17 @@ asyncio.run(io())
 timing.start("t").stop()
 assert [m.name for m in timing.metrics] == ["io", "t"]
 assert timing.metrics[0].dur >= 5.0, timing.metrics
+assert Metric.__module__ == "timingheader" and timingheader.__version__ == "1.0.0"
+def gen():
+    yield 1
+
+for call in (lambda: build("db"), lambda: Metric("a").param(1), lambda: timing.measure("g")(gen)):
+    try:
+        call()
+    except TypeError:
+        pass
+    else:
+        raise AssertionError("no TypeError")
 print("e2e ok")
 """
 
@@ -81,12 +92,15 @@ def test_installed_wheel_end_to_end(tmp_path: Path) -> None:
     assert "timingheader/__main__.py" in names
     assert not any(name.startswith("tests/") for name in names)
     assert any(name.endswith("entry_points.txt") for name in names)
+    assert any(name.endswith("licenses/LICENSE") for name in names), names
     listing = _run(sys.executable, "-m", "tarfile", "-l", sdist).stdout
-    assert "IMPROVEMENTS-round" not in listing
-    assert "tests/upstream/MANIFEST.json" in listing
-    assert ".js.sub.headers" not in listing
-    assert "tests/test_wpt.py" in listing
+    for absent in ("IMPROVEMENTS-round", "CERT-1.0", ".js.sub.headers", "rfc9110.txt", "docs/"):
+        assert absent not in listing, absent
+    for present in ("tests/upstream/MANIFEST.json", "tests/test_wpt.py", "GUIDE.md", "LICENSE"):
+        assert present in listing, present
     assert "scripts/fetch_upstream.py" in listing
+    checked = _run(sys.executable, "-m", "twine", "check", "--strict", wheel, sdist)
+    assert checked.returncode == 0, checked.stdout + checked.stderr
 
     env_dir = tmp_path / "venv"
     venv.create(env_dir, with_pip=True)
@@ -111,3 +125,17 @@ def test_installed_wheel_end_to_end(tmp_path: Path) -> None:
     module = _run(python, "-I", "-m", "timingheader", "--json", "a;dur=1", cwd=work)
     assert module.returncode == 0, module.stderr
     assert '"dur": 1.0' in module.stdout
+    table = _run(script, 'db;dur=53, cache;desc="Cache Read";dur=23.2', cwd=work)
+    assert table.returncode == 0 and table.stdout.split() == [
+        "name",
+        "dur",
+        "desc",
+        "db",
+        "53",
+        "cache",
+        "23.2",
+        "'Cache",
+        "Read'",
+    ], table.stdout
+    empty = _run(script, cwd=work, stdin="HTTP/1.1 200 OK\nContent-Type: text/html\n")
+    assert empty.returncode == 2 and "no Server-Timing value" in empty.stderr
