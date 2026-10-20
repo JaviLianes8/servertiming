@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -12,7 +13,7 @@ import pytest
 SRC = Path(__file__).resolve().parents[1] / "src"
 
 SNIPPET = """
-from servertiming import Metric, Timing, build, parse
+from timingheader import Metric, Timing, build, parse
 timing = Timing()
 reveal_type(parse("db"))
 reveal_type(parse(["db", "x"], strict=True)[0].dur)
@@ -41,17 +42,22 @@ def mypy_output(tmp_path_factory: pytest.TempPathFactory) -> str:
     target = folder / "snippet.py"
     target.write_text(SNIPPET, encoding="utf-8")
     config = folder / "mypy.ini"
-    config.write_text(f"[mypy]\nmypy_path = {SRC.as_posix()}\n", encoding="utf-8")
+    # From a checkout the package is read from src; from an sdist without src, mypy finds
+    # the installed package through its py.typed marker.
+    path = f"mypy_path = {SRC.as_posix()}\n" if SRC.is_dir() else ""
+    config.write_text(f"[mypy]\n{path}", encoding="utf-8")
     cache = str(folder / "cache")
     args = ["--strict", "--config-file", str(config), "--cache-dir", cache, str(target)]
     try:
         from mypy import api
     except ImportError:
-        # The interpreter running pytest may lack mypy while the one on PATH has it.
+        # The interpreter running pytest may lack mypy while the one on PATH has it; that
+        # mypy then reads the packages installed for this interpreter.
         program = shutil.which("mypy")
         if program is None:
             pytest.skip("mypy is not installed")
-        result = subprocess.run([program, *args], capture_output=True, text=True, check=False)
+        command = [program, "--python-executable", sys.executable, *args]
+        result = subprocess.run(command, capture_output=True, text=True, check=False)
         return result.stdout + result.stderr
     out, err, _ = api.run(args)
     return str(out) + str(err)
@@ -60,12 +66,12 @@ def mypy_output(tmp_path_factory: pytest.TempPathFactory) -> str:
 def test_functions_return_the_documented_types(mypy_output: str) -> None:
     lines = (4, 5, 6, 7, 8, 9, 13, 16)
     assert [_revealed(mypy_output, line) for line in lines] == [
-        "list[servertiming._metric.Metric]",
+        "list[timingheader._metric.Metric]",
         "float | None",
         "tuple[tuple[str, str], ...]",
         "float",
         "str",
-        "servertiming._metric.Metric",
+        "timingheader._metric.Metric",
         "def (x: int) -> str",
         "def () -> Coroutine[Any, Any, bytes]",
     ]

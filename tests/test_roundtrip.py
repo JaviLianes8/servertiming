@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import random
 
-from servertiming import Metric, build, parse
-from servertiming._syntax import TCHARS
+from timingheader import Metric, build, parse
+from timingheader._syntax import TCHARS
 
 _TOKEN = sorted(TCHARS)
 # Everything a quoted string can carry, weighted towards the characters that need care.

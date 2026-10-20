@@ -1,6 +1,6 @@
 """Build the wheel, install it in a throwaway venv and drive the installed package.
 
-Slow and needs the build backend, so it runs only with SERVERTIMING_E2E=1.
+Slow and needs the build backend, so it runs only with TIMINGHEADER_E2E=1.
 """
 
 from __future__ import annotations
@@ -17,17 +17,17 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 
 pytestmark = pytest.mark.skipif(
-    os.environ.get("SERVERTIMING_E2E") != "1", reason="set SERVERTIMING_E2E=1 to build and install"
+    os.environ.get("TIMINGHEADER_E2E") != "1", reason="set TIMINGHEADER_E2E=1 to build and install"
 )
 
 PROGRAM = r"""
 import asyncio, importlib.metadata, importlib.resources, pickle
-import servertiming
-from servertiming import Metric, ServerTimingError, Timing, build, parse
+import timingheader
+from timingheader import Metric, ServerTimingError, Timing, build, parse
 
-assert "site-packages" in servertiming.__file__, servertiming.__file__
-assert importlib.metadata.version("servertiming") == servertiming.__version__
-assert importlib.resources.files("servertiming").joinpath("py.typed").is_file()
+assert "site-packages" in timingheader.__file__, timingheader.__file__
+assert importlib.metadata.version("timingheader") == timingheader.__version__
+assert importlib.resources.files("timingheader").joinpath("py.typed").is_file()
 assert parse('db;desc=d1 d2;dur=12ms, [x], miss;DUR=1;dur=2') == [
     Metric("db", 12.0, "d1"), Metric("miss", 1.0)
 ]
@@ -58,6 +58,17 @@ asyncio.run(io())
 timing.start("t").stop()
 assert [m.name for m in timing.metrics] == ["io", "t"]
 assert timing.metrics[0].dur >= 5.0, timing.metrics
+assert Metric.__module__ == "timingheader" and timingheader.__version__ == "1.0.0"
+def gen():
+    yield 1
+
+for call in (lambda: build("db"), lambda: Metric("a").param(1), lambda: timing.measure("g")(gen)):
+    try:
+        call()
+    except TypeError:
+        pass
+    else:
+        raise AssertionError("no TypeError")
 print("e2e ok")
 """
 
@@ -74,19 +85,22 @@ def test_installed_wheel_end_to_end(tmp_path: Path) -> None:
     dist = tmp_path / "dist"
     built = _run(sys.executable, "-m", "build", "--outdir", dist, ROOT)
     assert built.returncode == 0, built.stderr
-    (wheel,) = dist.glob("servertiming-*.whl")
-    (sdist,) = dist.glob("servertiming-*.tar.gz")
+    (wheel,) = dist.glob("timingheader-*.whl")
+    (sdist,) = dist.glob("timingheader-*.tar.gz")
     names = zipfile.ZipFile(wheel).namelist()
-    assert "servertiming/py.typed" in names
-    assert "servertiming/__main__.py" in names
+    assert "timingheader/py.typed" in names
+    assert "timingheader/__main__.py" in names
     assert not any(name.startswith("tests/") for name in names)
     assert any(name.endswith("entry_points.txt") for name in names)
+    assert any(name.endswith("licenses/LICENSE") for name in names), names
     listing = _run(sys.executable, "-m", "tarfile", "-l", sdist).stdout
-    assert "IMPROVEMENTS-round" not in listing
-    assert "tests/upstream/MANIFEST.json" in listing
-    assert ".js.sub.headers" not in listing
-    assert "tests/test_wpt.py" in listing
+    for absent in ("IMPROVEMENTS-round", "CERT-1.0", ".js.sub.headers", "rfc9110.txt", "docs/"):
+        assert absent not in listing, absent
+    for present in ("tests/upstream/MANIFEST.json", "tests/test_wpt.py", "GUIDE.md", "LICENSE"):
+        assert present in listing, present
     assert "scripts/fetch_upstream.py" in listing
+    checked = _run(sys.executable, "-m", "twine", "check", "--strict", wheel, sdist)
+    assert checked.returncode == 0, checked.stdout + checked.stderr
 
     env_dir = tmp_path / "venv"
     venv.create(env_dir, with_pip=True)
@@ -102,12 +116,26 @@ def test_installed_wheel_end_to_end(tmp_path: Path) -> None:
     assert result.returncode == 0, result.stderr
     assert result.stdout.strip() == "e2e ok"
 
-    script = bindir / ("servertiming.exe" if sys.platform == "win32" else "servertiming")
+    script = bindir / ("timingheader.exe" if sys.platform == "win32" else "timingheader")
     headers = "HTTP/1.1 200 OK\nServer-Timing: db;dur=53\nServer-Timing: x;\n"
     checked = _run(script, cwd=work, stdin=headers)
     assert checked.returncode == 1, checked.stderr
     assert checked.stdout.splitlines()[1].split() == ["db", "53"]
     assert "invalid value 2" in checked.stderr
-    module = _run(python, "-I", "-m", "servertiming", "--json", "a;dur=1", cwd=work)
+    module = _run(python, "-I", "-m", "timingheader", "--json", "a;dur=1", cwd=work)
     assert module.returncode == 0, module.stderr
     assert '"dur": 1.0' in module.stdout
+    table = _run(script, 'db;dur=53, cache;desc="Cache Read";dur=23.2', cwd=work)
+    assert table.returncode == 0 and table.stdout.split() == [
+        "name",
+        "dur",
+        "desc",
+        "db",
+        "53",
+        "cache",
+        "23.2",
+        "'Cache",
+        "Read'",
+    ], table.stdout
+    empty = _run(script, cwd=work, stdin="HTTP/1.1 200 OK\nContent-Type: text/html\n")
+    assert empty.returncode == 2 and "no Server-Timing value" in empty.stderr

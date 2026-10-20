@@ -7,7 +7,7 @@ import sys
 
 import pytest
 
-from servertiming._cli import main
+from timingheader._cli import main
 
 
 def test_values_are_shown_as_a_table_and_valid_input_exits_zero(
@@ -61,8 +61,8 @@ def test_no_input_exits_two(capsys: pytest.CaptureFixture[str]) -> None:
 def test_python_dash_m_runs_the_command(
     capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setattr(sys, "argv", ["servertiming", "x;dur=2"])
+    monkeypatch.setattr(sys, "argv", ["timingheader", "x;dur=2"])
     with pytest.raises(SystemExit) as caught:
-        runpy.run_module("servertiming", run_name="__main__")
+        runpy.run_module("timingheader", run_name="__main__")
     assert caught.value.code == 0
     assert "x" in capsys.readouterr().out

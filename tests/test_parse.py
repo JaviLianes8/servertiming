@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import pytest
 
-from servertiming import Metric, build, parse
+from timingheader import Metric, build, parse
 
 
 def test_parse_a_single_bare_metric() -> None:

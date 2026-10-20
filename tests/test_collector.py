@@ -6,7 +6,7 @@ import time
 
 import pytest
 
-from servertiming import Metric, ServerTimingError, Timing
+from timingheader import Metric, ServerTimingError, Timing
 
 
 def _ticks(*values: float) -> Timing:

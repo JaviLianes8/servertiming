@@ -16,7 +16,7 @@ from typing import Any
 import pytest
 from conftest import read_upstream, upstream_manifest
 
-from servertiming import parse
+from timingheader import parse
 
 CASES = sorted(
     {name.split(".", 1)[0] for name in upstream_manifest()["files"]}, key=lambda n: int(n)

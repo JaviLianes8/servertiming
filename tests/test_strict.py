@@ -8,7 +8,7 @@ import pickle
 
 import pytest
 
-from servertiming import Metric, ServerTimingError, parse
+from timingheader import Metric, ServerTimingError, parse
 
 VALID = [
     ("", []),

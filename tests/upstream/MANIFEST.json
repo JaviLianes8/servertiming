@@ -5,7 +5,46 @@
   "revision": "commit 1b67fafba1d46d158b45a831bb604d86c9b5c5a8",
   "runner": "https://raw.githubusercontent.com/web-platform-tests/wpt/1b67fafba1d46d158b45a831bb604d86c9b5c5a8/server-timing/server_timing_header-parsing.https.html",
   "licence": "BSD-3-Clause, https://github.com/web-platform-tests/wpt/blob/master/LICENSE.md",
-  "fetched": "2026-10-13",
+  "fetched": "2026-10-13, fetched again on 2026-10-20 with the same sha256",
+  "documents_folder": "docs",
+  "documents": {
+    "server-timing.bs": {
+      "title": "W3C Server Timing, Editor's Draft source (Bikeshed)",
+      "url": "https://raw.githubusercontent.com/w3c/server-timing/573ee35b45bd26d4a88747b97b0db9f6d9963038/index.bs",
+      "revision": "commit 573ee35b45bd26d4a88747b97b0db9f6d9963038 (latest on 2026-10-20)",
+      "licence": "W3C Software and Document License, https://www.w3.org/copyright/software-license/",
+      "fetched": "2026-10-20",
+      "size": 20703,
+      "sha256": "09bdb60fe8bad1699c02067c07c31ac5e21ad0aa30f3b271f8ee3b5291422bee"
+    },
+    "rfc9110.txt": {
+      "title": "RFC 9110, HTTP Semantics",
+      "url": "https://www.rfc-editor.org/rfc/rfc9110.txt",
+      "revision": "published RFC (immutable)",
+      "licence": "IETF Trust Legal Provisions, https://trustee.ietf.org/license-info",
+      "fetched": "2026-10-20",
+      "size": 502941,
+      "sha256": "21c1cdce6ab0e5509b04d84a28000836c7a087cf786efe6f04877ebfff47232a"
+    },
+    "whatwg-html-source.html": {
+      "title": "WHATWG HTML Living Standard source",
+      "url": "https://raw.githubusercontent.com/whatwg/html/c97dc912b4121294569d6701a21e88880b1e4e1f/source",
+      "revision": "commit c97dc912b4121294569d6701a21e88880b1e4e1f (latest on 2026-10-20)",
+      "licence": "CC BY 4.0, https://creativecommons.org/licenses/by/4.0/",
+      "fetched": "2026-10-20",
+      "size": 8011199,
+      "sha256": "d2b3e690add4730aa7f6c3f4575546a1028ba707a425425db9f5ca8995652416"
+    },
+    "whatwg-fetch.html": {
+      "title": "WHATWG Fetch Standard, commit snapshot",
+      "url": "https://fetch.spec.whatwg.org/commit-snapshots/59afe349913d56898c947576216f1c2579308be7/",
+      "revision": "commit 59afe349913d56898c947576216f1c2579308be7 (latest on 2026-10-20)",
+      "licence": "CC BY 4.0, https://creativecommons.org/licenses/by/4.0/",
+      "fetched": "2026-10-20",
+      "size": 1855270,
+      "sha256": "5d80be13cdc78b652732acf22002c17a3be3691b7c3de2cb9c26c794aad2b881"
+    }
+  },
   "files": {
     "0.js": {
       "size": 45,

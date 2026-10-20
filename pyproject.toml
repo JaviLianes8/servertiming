@@ -3,17 +3,17 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "servertiming"
-version = "0.2.0"
+name = "timingheader"
+version = "1.0.0"
 description = "Build, parse and validate the HTTP Server-Timing header the way browsers read it, with timing helpers"
 readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
 license-files = ["LICENSE"]
 authors = [{ name = "Javier Lianes", email = "javier@lianes8studio.com" }]
-keywords = ["server-timing", "http", "header", "performance", "timing", "metrics", "w3c"]
+keywords = ["server-timing", "http", "header", "performance", "timing", "metrics", "w3c", "rfc9110", "devtools", "web-performance"]
 classifiers = [
-    "Development Status :: 4 - Beta",
+    "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
@@ -24,31 +24,32 @@ classifiers = [
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
     "Topic :: Internet :: WWW/HTTP",
+    "Topic :: Software Development :: Libraries",
     "Topic :: System :: Monitoring",
     "Typing :: Typed",
 ]
 dependencies = []
 
 [project.optional-dependencies]
-dev = ["ruff", "mypy", "pytest", "build", "twine"]
+dev = ["ruff", "mypy", "pytest", "pytest-timeout", "build", "twine"]
 
 [project.scripts]
-servertiming = "servertiming._cli:main"
+timingheader = "timingheader._cli:main"
 
 [project.urls]
 Homepage = "https://lianes8studio.com"
-Repository = "https://github.com/JaviLianes8/servertiming"
-Issues = "https://github.com/JaviLianes8/servertiming/issues"
-Changelog = "https://github.com/JaviLianes8/servertiming/blob/main/CHANGELOG.md"
+Source = "https://github.com/JaviLianes8/timingheader"
+Issues = "https://github.com/JaviLianes8/timingheader/issues"
+Changelog = "https://github.com/JaviLianes8/timingheader/blob/main/CHANGELOG.md"
 LinkedIn = "https://www.linkedin.com/in/jlianes/"
 Funding = "https://buymeacoffee.com/jlianesglrs"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/servertiming"]
+packages = ["src/timingheader"]
 
 [tool.hatch.build.targets.sdist]
 # Third-party test files are fetched locally and never shipped; only their manifest is.
-exclude = ["IMPROVEMENTS-round*.md", "tests/upstream/wpt-parsing"]
+exclude = ["IMPROVEMENTS-round*.md", "CERT-1.0-*.md", "tests/upstream/*", "!tests/upstream/MANIFEST.json"]
 
 [tool.ruff]
 line-length = 100
@@ -62,7 +63,13 @@ python_version = "3.10"
 strict = true
 mypy_path = "src"
 
+[[tool.mypy.overrides]]
+# The browser check needs playwright, which the dev extra does not install on purpose.
+module = ["playwright", "playwright.*"]
+ignore_missing_imports = true
+
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+testpaths = ["src", "tests"]
 pythonpath = ["src"]
-addopts = "-q"
+addopts = "-q --doctest-modules"
+timeout = 300

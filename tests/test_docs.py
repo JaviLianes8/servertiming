@@ -7,15 +7,22 @@ import io
 import re
 from pathlib import Path
 
-import servertiming
-from servertiming._cli import main
+import pytest
+
+import timingheader
+from timingheader._cli import main
 
 ROOT = Path(__file__).resolve().parents[1]
 README = (ROOT / "README.md").read_text(encoding="utf-8")
+GUIDE = (ROOT / "GUIDE.md").read_text(encoding="utf-8")
+BADGE = (
+    "[![Lianes8 Certified](https://lianes8studio.com/certified/lianes8-certified-badge.svg)]"
+    "(https://lianes8studio.com/certified)"
+)
 
 
-def _python_blocks() -> list[str]:
-    return re.findall(r"```python\n(.*?)```", README, flags=re.DOTALL)
+def _python_blocks(text: str = README) -> list[str]:
+    return re.findall(r"```python\n(.*?)```", text, flags=re.DOTALL)
 
 
 def _expected_output(block: str) -> list[str]:
@@ -29,18 +36,28 @@ def _expected_output(block: str) -> list[str]:
     return expected
 
 
-def test_every_readme_example_runs_and_prints_its_comments() -> None:
+@pytest.mark.parametrize(("name", "blocks", "outputs"), [("README", 6, 9), ("GUIDE", 5, 11)])
+def test_every_example_runs_and_prints_its_comments(name: str, blocks: int, outputs: int) -> None:
+    text = README if name == "README" else GUIDE
     checked = 0
-    for block in _python_blocks():
+    for block in _python_blocks(text):
         out = io.StringIO()
         with contextlib.redirect_stdout(out):
-            exec(compile(block, "README.md", "exec"), {"__name__": "readme"})
+            exec(compile(block, f"{name}.md", "exec"), {"__name__": name.lower()})
         expected = _expected_output(block)
         assert expected, block
         assert out.getvalue().splitlines() == expected
         checked += len(expected)
-    assert len(_python_blocks()) == 6
-    assert checked == 9
+    assert len(_python_blocks(text)) == blocks
+    assert checked == outputs
+
+
+def test_the_readme_links_are_absolute_and_carry_the_badge() -> None:
+    assert README.splitlines()[2] == BADGE
+    for target in re.findall(r"\]\(([^)]+)\)", README):
+        assert target.startswith("https://"), target
+    assert "https://github.com/JaviLianes8/timingheader/blob/main/GUIDE.md" in README
+    assert "https://github.com/JaviLianes8/timingheader/blob/main/CHANGELOG.md" in README
 
 
 def test_every_print_in_the_readme_shows_its_output() -> None:
@@ -51,7 +68,7 @@ def test_every_print_in_the_readme_shows_its_output() -> None:
 
 def test_the_command_line_example_prints_what_the_readme_shows() -> None:
     shell = README.split("## Command line", 1)[1].split("```", 2)[1]
-    command = "$ servertiming 'db;dur=53, cache;desc=\"Cache Read\";dur=23.2'\n"
+    command = "$ timingheader 'db;dur=53, cache;desc=\"Cache Read\";dur=23.2'\n"
     shown = shell.split(command, 1)[1].split("$ ", 1)[0].splitlines()
     out = io.StringIO()
     with contextlib.redirect_stdout(out):
@@ -61,7 +78,7 @@ def test_the_command_line_example_prints_what_the_readme_shows() -> None:
 
 def test_the_api_table_lists_every_public_name() -> None:
     table = README.split("## API", 1)[1].split("\n## ", 1)[0]
-    for name in servertiming.__all__:
+    for name in timingheader.__all__:
         assert f"`{name}" in table, name
 
 
@@ -69,12 +86,12 @@ def test_version_matches_pyproject() -> None:
     text = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
     match = re.search(r'^version = "([^"]+)"$', text, flags=re.MULTILINE)
     assert match is not None
-    assert match.group(1) == servertiming.__version__
+    assert match.group(1) == timingheader.__version__
 
 
 def test_changelog_has_an_entry_for_this_version() -> None:
     text = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
-    assert f"## [{servertiming.__version__}]" in text
+    assert re.search(rf"^## {re.escape(timingheader.__version__)} - \d{{4}}-\d\d-\d\d$", text, re.M)
 
 
 def _tracked_text_files() -> list[Path]:
