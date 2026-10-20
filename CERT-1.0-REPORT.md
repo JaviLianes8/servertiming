@@ -17,7 +17,7 @@ Progress:
 - [x] Author mutation round (item 18)
 - [x] Gates (item 15)
 - [x] PR and trace guard (merge and publish, item 17, are the maintainer's)
-- [ ] Five QA lenses (item 19, run after this stage)
+- [ ] Five QA lenses (item 19): round 1 run, all findings fixed in 45e91a9; re-verification by the lenses pending
 - [ ] Independent reviewer (item 16, run after this stage)
 
 ## Scorecard
@@ -42,7 +42,7 @@ Progress:
 | 16 | Independent reviewer | pending (next stage) |
 | 17 | PR and trace guard | PR from `release/1.0.0`, trace guard CLEAN; merge and publish left to the maintainer |
 | 18 | Contracts bite (mutations) | PASS: author round of 30 mutants, all killed (one after a contract was added) |
-| 19 | Five independent QA lenses | pending (next stage) |
+| 19 | Five independent QA lenses | round 1: 21 findings, all fixed (see QA lenses); re-verification pending |
 
 ## Name
 
@@ -52,8 +52,9 @@ PyPI refused `servertiming`. The new name `timingheader` was checked on 2026-10-
 `timing.headers`, `tlmlngheader`, `t1m1ngheader` and `tImIngheader`, and
 `pypi.org/simple/timingheader/` is 404. The distribution, the import package, the
 command, the tests, the docs and the project URLs use it; the old name appears in one
-CHANGELOG line. The GitHub repository and the local folder keep the old name until the
-maintainer renames them at merge.
+CHANGELOG line. The GitHub repository and the local folder keep the old name; the project
+URLs and the README links point at https://github.com/JaviLianes8/servertiming, which
+answers today and which GitHub redirects if the repository is ever renamed.
 
 ## Defects found in 0.2.0
 
@@ -194,3 +195,43 @@ At 8d2adff from a fresh clone on this PC, each command on its own, with the fetc
 and `TIMINGHEADER_E2E=1`: `ruff format --check .`, `ruff check .`, `mypy --strict src`,
 `mypy --strict src tests` and `pytest` (494 passed, 12 skipped: the browser tests, run
 separately above) all exit 0.
+
+## QA lenses (item 19)
+
+### Round 1
+
+Five independent lenses (a: API and docs, b: correctness and ground truth, c: adversarial,
+d: packaging and e2e, e: contract strength) reviewed 17c7c9b. Every finding was accepted
+and fixed in 45e91a9; none is disputed. Each behaviour fix has a contract test that failed
+on 17c7c9b before the fix (`tests/test_qa_recording.py`, `tests/test_qa_cli.py`), and every
+behaviour change is in the CHANGELOG.
+
+| Lens | Id | Finding | Fix |
+| --- | --- | --- | --- |
+| a, c | A1, C-F2 | Every `Measure` made its own context variable; a long-lived thread kept one per request (100,000 requests: 100,000 variables, about 11.8 MB) | One module-level context variable holds the running blocks; the same repro now leaves 1 variable and 0 KiB. Contracts: no growth in a long-lived context or a worker thread, a finished `Measure` is freed |
+| a, d | A2, D-F2 | Project URLs and README links pointed at a repository that does not exist (404) | They point at `JaviLianes8/servertiming`; `tests/test_links.py` (`TIMINGHEADER_LINKS=1`) checks every URL in README, GUIDE, CHANGELOG and pyproject: 20 passed on 2026-10-20 (LinkedIn answers bots with 999, accepted; files of this branch checked in the tree until it merges) |
+| a | A3 | `build` docstring said "a real number" for the duration | Says an `int` or a `float`, not a `bool` |
+| a | A4 | `field_list`, `parse_lenient`, `parse_strict`, `Iterable`, `annotations` reachable as public names | Imported under private names or only for type checking; contract: `dir(timingheader)` minus underscores equals `__all__` |
+| a, d | A5, D-F5 | `build` and the property getters reported private modules; `pickle.dumps(build)` named `timingheader._build` | Relabelled; contract: every public name and every member and property accessor of the public classes report `timingheader`, `build` and `parse` pickle by the package name |
+| a | A6 | `Measure` and `Timer` constructors checked nothing | They check `timing`, name, description (and `start`) as `Timing.measure` and `Timing.start` do |
+| b | B-F1 | Docs said `parse` is "the W3C algorithm" and "follows the spec", but the Editor's Draft algorithm differs from the corpus | README, GUIDE and docstrings say `parse` follows the web-platform-tests corpus; a new GUIDE section lists the differences. `tests/test_spec_w3c_algorithm.py` transcribes the algorithm from the fetched text, checks the steps are still there, pins the listed differences and measures 35 of 85 corpus cases on which algorithm and corpus disagree (the reviewer's count, reproduced independently) |
+| b | B-F2 | The command merged the fields of every response in a dump with redirects | A status line starts a new response; only the last one is read |
+| c | C-F1 | A `str` subclass could hide CR/LF from the checks and reach the header | Every check and write works on a plain `str` copy; `parse` input too |
+| c | C-F3 | A clock giving NaN or infinity recorded a metric that broke every later `header()` | `ServerTimingError` where the measurement ends, nothing recorded |
+| c | C-F4 | Exit without a matching enter raised an internal `ValueError` | `RuntimeError` with a clear message, documented |
+| d | D-F1 | `--json` wrote invalid JSON when stdout could not encode a character | `ensure_ascii=True`; tested with cp1252, ASCII and UTF-8 stdout |
+| d | D-F3 | `BrokenPipeError` traceback when the reader closed early | Output stops quietly, the exit status still reflects validity; subprocess test |
+| d | D-F4 | `mypy --strict src tests` red without playwright | mypy override for `playwright`; checked in a fresh venv without it (red before, green after) |
+| e | E-F1 | Exit 2 for blank arguments not pinned (M70) | Pinned; invalid values are now numbered by their place among the arguments, blank ones included |
+| e | E-F2 | ISO-8859-1 stdin not pinned (M86) | Subprocess test with a raw 0xE9 byte |
+| e | E-F3 | Status-line detection not pinned (M76) | Test with a status line alone, exit 2 |
+| e | E-F4 | JSON escaping not pinned (M68) | Raw `--json` text pinned (now ASCII escapes, see D-F1) |
+
+Mutants re-run against the new tests, one at a time on `_cli.py`: M70, M86, M76 and M68
+as described by lens e, plus "every response kept" (B-F2) and "broken pipe re-raised"
+(D-F3); all six killed.
+
+Gates at 45e91a9, on Elena's PC (CPython 3.14.2, fresh venv, fetched files present,
+`TIMINGHEADER_E2E=1`): `ruff format --check .`, `ruff check .`, `mypy --strict src`,
+`mypy --strict src tests` exit 0; `pytest`: 538 passed, 33 skipped (browser tests and the
+link check, which run on request) in 39 s.
