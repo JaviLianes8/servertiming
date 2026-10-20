@@ -5,7 +5,7 @@ from __future__ import annotations
 import math
 import re
 
-from ._errors import ServerTimingError
+from ._errors import ServerTimingError, shown
 
 # HTML 2.3.4.3, "valid floating-point number": what a sender may write.
 _VALID = re.compile(r"-?(?:[0-9]+(?:\.[0-9]+)?|\.[0-9]+)(?:[eE][-+]?[0-9]+)?")
@@ -59,13 +59,13 @@ def parse_number(text: str) -> float | None:
 def format_number(value: float, precision: int | None = None) -> str:
     """Write a finite duration compactly: ``12.5``, ``100``, ``1e-05``."""
     if isinstance(value, bool) or not isinstance(value, (int, float)):
-        raise ServerTimingError(f"duration must be a real number, got {value!r}")
+        raise TypeError(f"duration must be an int or a float, got {shown(value)}")
     try:
         number = float(value)
     except OverflowError:
         number = math.inf
     if not math.isfinite(number):
-        raise ServerTimingError(f"duration must be a finite number, got {value!r}")
+        raise ServerTimingError(f"duration must be a finite number, got {shown(value)}")
     if precision is None:
         text = repr(number)
     else:

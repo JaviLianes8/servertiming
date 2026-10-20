@@ -55,17 +55,19 @@ def fields_from_lines(lines: Sequence[str]) -> list[str]:
     """Bare values one per line, or the Server-Timing fields of a header block."""
     if not any(_HEADER_LINE.match(line) for line in lines):
         return [line.strip(_OWS) for line in lines if line.strip(_OWS)]
-    fields: list[str] = []
+    # Each field is kept as its parts and joined once, so many folded lines stay linear.
+    fields: list[list[str]] = []
     inside = False
     for line in lines:
         if inside and line[:1] in (" ", "\t"):
             # An obsolete folded line continues the field above it (RFC 9112 5.2).
-            fields[-1] = " ".join(part for part in (fields[-1], line.strip(_OWS)) if part)
+            fields[-1].append(line.strip(_OWS))
             continue
-        inside = line.lower().startswith(_PREFIX)
+        inside = line[: len(_PREFIX)].lower() == _PREFIX
         if inside:
-            fields.append(line[len(_PREFIX) :].strip(_OWS))
-    return [field for field in fields if field]
+            fields.append([line[len(_PREFIX) :].strip(_OWS)])
+    joined = (" ".join(part for part in parts if part) for parts in fields)
+    return [field for field in joined if field]
 
 
 def _errors(fields: list[str]) -> list[ServerTimingError]:

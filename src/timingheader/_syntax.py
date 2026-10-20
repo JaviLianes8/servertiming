@@ -2,13 +2,22 @@
 
 from __future__ import annotations
 
-from ._errors import ServerTimingError
+from ._errors import ServerTimingError, shown
 
 # RFC 9110 5.6.2: tchar, any visible US-ASCII character except the delimiters.
 TCHARS = frozenset("!#$%&'*+-.^_`|~0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
 
 # RFC 9110 5.6.3: OWS is spaces and horizontal tabs only.
 OWS = frozenset(" \t")
+
+# Names compare without regard to ASCII case only: str.lower would turn the Kelvin sign
+# into a "k" and so make a name that is not a token look like one.
+_ASCII_LOWER = str.maketrans("ABCDEFGHIJKLMNOPQRSTUVWXYZ", "abcdefghijklmnopqrstuvwxyz")
+
+
+def ascii_lower(text: str) -> str:
+    """``text`` with A to Z lowered and every other character unchanged."""
+    return text.translate(_ASCII_LOWER)
 
 
 def is_token(text: str) -> bool:
@@ -41,6 +50,8 @@ def quote(text: str, what: str) -> str:
 
 def check_token(text: str, what: str) -> str:
     """Return ``text`` unchanged, or raise when it is not a token."""
-    if not isinstance(text, str) or not is_token(text):
-        raise ServerTimingError(f"{what} must be a non-empty token, got {text!r}")
+    if not isinstance(text, str):
+        raise TypeError(f"{what} must be a str, got {shown(text)}")
+    if not is_token(text):
+        raise ServerTimingError(f"{what} must be a non-empty token, got {shown(text)}")
     return text

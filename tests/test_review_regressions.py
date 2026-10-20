@@ -166,5 +166,5 @@ def test_parse_explains_how_to_pass_bytes() -> None:
 
 
 def test_build_explains_that_it_takes_a_list() -> None:
-    with pytest.raises(ServerTimingError, match="wrap one metric in a list"):
+    with pytest.raises(TypeError, match="wrap one metric in a list"):
         build(Metric("db"))  # type: ignore[arg-type]

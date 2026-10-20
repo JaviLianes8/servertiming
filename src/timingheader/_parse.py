@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 
+from ._errors import shown
 from ._metric import Metric
 from ._number import parse_number
 from ._syntax import OWS, TCHARS
@@ -16,7 +17,7 @@ def field_list(value: str | Iterable[str]) -> list[str]:
     fields = [value] if isinstance(value, str) else list(value)
     for field in fields:
         if not isinstance(field, str):
-            raise TypeError(f"field values must be str, got {field!r}")
+            raise TypeError(f"field values must be str, got {shown(field)}")
     return fields
 
 

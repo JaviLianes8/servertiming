@@ -4,16 +4,16 @@ build-backend = "hatchling.build"
 
 [project]
 name = "timingheader"
-version = "0.2.0"
+version = "1.0.0"
 description = "Build, parse and validate the HTTP Server-Timing header the way browsers read it, with timing helpers"
 readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
 license-files = ["LICENSE"]
 authors = [{ name = "Javier Lianes", email = "javier@lianes8studio.com" }]
-keywords = ["server-timing", "http", "header", "performance", "timing", "metrics", "w3c"]
+keywords = ["server-timing", "http", "header", "performance", "timing", "metrics", "w3c", "rfc9110", "devtools", "web-performance"]
 classifiers = [
-    "Development Status :: 4 - Beta",
+    "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
@@ -24,6 +24,7 @@ classifiers = [
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
     "Topic :: Internet :: WWW/HTTP",
+    "Topic :: Software Development :: Libraries",
     "Topic :: System :: Monitoring",
     "Typing :: Typed",
 ]

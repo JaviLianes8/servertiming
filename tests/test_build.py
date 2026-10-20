@@ -40,10 +40,20 @@ def test_precision_never_writes_a_negative_zero() -> None:
     assert build([Metric("cpu", dur=-0.0001)], precision=2) == "cpu;dur=0"
 
 
-@pytest.mark.parametrize("precision", [-1, 1.5, True])
-def test_build_rejects_a_bad_precision(precision: object) -> None:
-    with pytest.raises(ServerTimingError):
+@pytest.mark.parametrize("precision", [-1, 21, 10**20])
+def test_build_rejects_a_precision_out_of_range(precision: int) -> None:
+    with pytest.raises(ServerTimingError, match="from 0 to 20"):
+        build([Metric("cpu", dur=1.0)], precision=precision)
+
+
+@pytest.mark.parametrize("precision", [1.5, True, "2"])
+def test_build_rejects_a_precision_that_is_not_an_int(precision: object) -> None:
+    with pytest.raises(TypeError, match="precision must be an int"):
         build([Metric("cpu", dur=1.0)], precision=precision)  # type: ignore[arg-type]
+
+
+def test_the_largest_precision_is_accepted() -> None:
+    assert build([Metric("cpu", dur=0.1)], precision=20) == "cpu;dur=0.10000000000000000555"
 
 
 def test_description_without_quoting_when_it_is_a_token() -> None:
@@ -87,18 +97,20 @@ def test_build_rejects_a_non_finite_duration(dur: float) -> None:
 
 @pytest.mark.parametrize("dur", [True, "5", None.__class__])
 def test_build_rejects_a_duration_that_is_not_a_number(dur: object) -> None:
-    with pytest.raises(ServerTimingError):
+    with pytest.raises(TypeError, match="duration must be an int or a float"):
         build([Metric("cpu", dur=dur)])  # type: ignore[arg-type]
 
 
 def test_build_rejects_a_description_that_is_not_a_str() -> None:
-    with pytest.raises(ServerTimingError):
+    with pytest.raises(TypeError, match="description must be a str"):
         build([Metric("cpu", desc=5)])  # type: ignore[arg-type]
 
 
 def test_build_rejects_something_that_is_not_a_metric() -> None:
-    with pytest.raises(ServerTimingError):
+    with pytest.raises(TypeError, match="expected a Metric"):
         build(["cpu"])  # type: ignore[list-item]
+    with pytest.raises(TypeError, match="wrap one metric in a list"):
+        build("cpu")  # type: ignore[arg-type]
 
 
 def test_extension_parameters_are_written_after_dur_and_desc() -> None:
@@ -115,13 +127,16 @@ def test_extension_parameters_are_written_after_dur_and_desc() -> None:
         (("DESC", "x"),),
         (("hit", "1"), ("HIT", "2")),
         (("hit", "a\nb"),),
-        (("hit", 1),),
-        (("hit",),),
-        ("hit",),
     ],
 )
 def test_build_rejects_bad_extension_parameters(params: object) -> None:
     with pytest.raises(ServerTimingError):
+        build([Metric("cdn", params=params)])  # type: ignore[arg-type]
+
+
+@pytest.mark.parametrize("params", [(("hit", 1),), ((1, "1"),), (("hit",),), ("hit",)])
+def test_build_rejects_extension_parameters_of_the_wrong_type(params: object) -> None:
+    with pytest.raises(TypeError):
         build([Metric("cdn", params=params)])  # type: ignore[arg-type]
 
 

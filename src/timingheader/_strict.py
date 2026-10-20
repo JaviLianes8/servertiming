@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from ._errors import ServerTimingError
+from ._errors import ServerTimingError, shown
 from ._metric import Metric
 from ._number import is_valid_number
 from ._parse import metric_from_params
@@ -86,7 +86,7 @@ class _Strict:
             value_at = self.pos
             value = self.quoted() if self.peek() == '"' else self.token("a token or quoted string")
             if key in params:
-                raise self.fail(f"parameter {key!r} is repeated", key_at)
+                raise self.fail(f"parameter {shown(key)} is repeated", key_at)
             if key == "dur" and not is_valid_number(value):
                 raise self.fail("dur is not a valid floating-point number", value_at)
             params[key] = value
