@@ -17,7 +17,7 @@ Progress:
 - [x] Author mutation round (item 18)
 - [x] Gates (item 15)
 - [x] PR and trace guard (merge and publish, item 17, are the maintainer's)
-- [ ] Five QA lenses (item 19): round 1 run, all findings fixed in 45e91a9; re-verification by the lenses pending
+- [ ] Five QA lenses (item 19): round 1 fixed in 45e91a9; round 2 (11 findings) fixed in 921ccf5 and 87f8cae; re-verification by the lenses pending
 - [ ] Independent reviewer (item 16, run after this stage)
 
 ## Scorecard
@@ -33,7 +33,7 @@ Progress:
 | 7 | Real ground truth | PASS: W3C, RFC 9110, HTML and Fetch fetched at fixed revisions, WPT corpus, Chrome 155, Firefox 158 and WebKit driven over HTTP |
 | 8 | Real e2e from the wheel | PASS: built wheel installed in a throwaway venv, used from an empty folder, command driven by subprocess; no PyPI release to upgrade from |
 | 9 | Seeded fuzz, no crash, hang or blowup | PASS |
-| 10 | Supported Pythons | PASS: CPython 3.10.19, 3.11.5, 3.12.12, 3.13.2, 3.14.2, 3.14.2t; 3.8.20 and 3.9.25 refused by `requires-python` |
+| 10 | Supported Pythons | PASS: CPython 3.10.19, 3.11.5, 3.12.12, 3.13.2, 3.14.2, 3.14.2t (all again at 87f8cae); 3.8.20 and 3.9.25 refused by `requires-python` |
 | 11 | README and `twine check` | PASS: `twine check --strict`, absolute links, badge |
 | 12 | Dated CHANGELOG section | PASS: 1.0.0, 2026-10-19 |
 | 13 | pyproject 1.0.0, Production/Stable | PASS |
@@ -42,7 +42,7 @@ Progress:
 | 16 | Independent reviewer | pending (next stage) |
 | 17 | PR and trace guard | PR from `release/1.0.0`, trace guard CLEAN; merge and publish left to the maintainer |
 | 18 | Contracts bite (mutations) | PASS: author round of 30 mutants, all killed (one after a contract was added) |
-| 19 | Five independent QA lenses | round 1: 21 findings, all fixed (see QA lenses); re-verification pending |
+| 19 | Five independent QA lenses | round 1: 21 findings, round 2: 11 findings, all fixed (see QA lenses); re-verification pending |
 
 ## Name
 
@@ -235,3 +235,41 @@ Gates at 45e91a9, on Elena's PC (CPython 3.14.2, fresh venv, fetched files prese
 `TIMINGHEADER_E2E=1`): `ruff format --check .`, `ruff check .`, `mypy --strict src`,
 `mypy --strict src tests` exit 0; `pytest`: 538 passed, 33 skipped (browser tests and the
 link check, which run on request) in 39 s.
+
+### Round 2
+
+The five lenses re-verified 45e91a9 (pushed head ddd4e84). Every round 1 finding was
+confirmed fixed; the new findings below were all accepted and fixed in 921ccf5, with the
+`parse` part of D-N1 reworked in 87f8cae so its pinned signature stays the same. None is
+disputed. Each behaviour fix has a contract test that failed on ddd4e84 before the fix
+(`tests/test_qa_contexts.py`, `tests/test_qa_cli_output.py`), and every behaviour change
+is in the CHANGELOG.
+
+| Lens | Id | Finding | Fix |
+| --- | --- | --- | --- |
+| a, d | A-N1, D-N2 | Leaving a `Measure` block from a context copied after the enter (another asyncio task, `asyncio.to_thread`, `copy_context().run`, every new thread on free-threaded 3.14) succeeded, and the exit where the block began recorded the metric again; the suite was red on 3.14.2t | Each running entry records the thread and asyncio task that entered it and is used once: an exit from another thread or task raises `RuntimeError` and leaves the entry, and a second exit through a copy of the context raises `RuntimeError`; nothing is recorded twice. Contracts: `asyncio.create_task`, `asyncio.to_thread`, a thread running a copied context (what 3.14t does), a second exit through `copy_context().run`. Docstring, GUIDE and CHANGELOG say exactly this. The suite passes on 3.14.2t |
+| b | B-F1b | README "Why" still said `parse` reads a header "as the specification says" | Now "as browsers and the web-platform-tests corpus do" |
+| c | C-N1 | An `int` clock reading too large for a float raised `OverflowError` from `Timer.stop()` and `Measure.__exit__` | Treated as a duration that is not finite: `ServerTimingError`, nothing recorded, the timer keeps running. Contract with a huge start, a huge end and a huge negative end, for a timer and a block |
+| c | C-N2 | With no stdout at all (fd 1 closed, `pythonw`) the command crashed with `AttributeError` and exit 1 | `_write` treats a missing stdout like a reader that stopped: the values are still checked and the exit status is theirs |
+| d | D-N1 | `typing.get_type_hints` and `inspect.signature(eval_str=True)` raised `NameError` on `parse` (`Iterable`) and on the `Measure` and `Timer` constructors (`Timing`) | `Timing` is imported at run time by the module of `Measure` and `Timer` (the collector imports them after defining `Timing`); `parse` delegates to a private function whose module imports `Iterable`, and names it as `__wrapped__`, so the annotations resolve while `Iterable` stays out of the package and the pinned signature text is unchanged. Contract: every public function, method and property getter resolves with both calls |
+| e | E-N1 | No test of a reader closed before a small write (mutants C07, C09, C10 survived) | Subprocess tests with the read end of a pipe closed before the command starts, for a valid value, `--json` and an invalid value: exit 0 or 1, no traceback |
+| e | E-N2 | No test of two blocks left out of order (S08, S11 survived) | Interleaved exits by hand and through `ExitStack`, both durations asserted |
+| e | E-N3 | Numbering of values read from stdin not pinned (C02) | Exact `invalid value 2` line for stdin values |
+| e | E-N4 | Last-response rule pinned only for HTTP/1.1 then HTTP/2 (C05) | Two HTTP/1.1 responses, through `fields_from_lines` and through the command |
+| e | E-N5 | `Timer` refusing a `bool` start not pinned (S04) | `True` case added to the constructor contract |
+| e | E-N6 | The plain copy in `field_list` not pinned (X01) | Lenient and strict `parse` of a `str` subclass whose `__len__` and `__getitem__` lie, alone and in a list |
+
+Mutants re-run one at a time against the new tests (laptop, CPython 3.14.6, fresh clone of
+87f8cae, a clean baseline first): lens e's C07, C09, C10, C02, C05, S04, S08 and S11, plus
+"no owner check", "entry usable twice", "OverflowError not caught", "stdout `None` not
+handled" and "`parse` without `__wrapped__`"; all thirteen killed, each by the new test
+meant for it.
+
+Gates at 87f8cae on the laptop (CPython 3.14.6, fresh clone and venv, fetched files
+present, `TIMINGHEADER_E2E=1`): `ruff format --check .`, `ruff check .`,
+`mypy --strict src`, `mypy --strict src tests` exit 0; `pytest`: 590 passed, 33 skipped
+(browser tests and the link check, which run on request). Interpreter matrix at 87f8cae on
+this PC (wheel installed in a fresh venv, the sdist's suite with `src` removed): CPython
+3.10.19, 3.11.5, 3.12.12, 3.13.2, 3.14.2 and 3.14.2t all pass (572 or 573 passed, 34
+skipped; 16 doctests each), and the wheel e2e passes; `twine check --strict` passes on
+both artifacts.

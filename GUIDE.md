@@ -137,15 +137,15 @@ the metrics finished, and `header(precision=None)` builds them.
   entered it. An exit with no matching entry raises `RuntimeError`, and so does an exit
   from a context copied after the enter: another asyncio task, `asyncio.to_thread`, a new
   thread on free-threaded Python 3.14, or a second exit through `copy_context().run`.
-  Nothing is recorded for such an exit, and the block still ends where it began. Running blocks
+  Nothing is recorded for such an exit, so no metric is recorded twice; after an exit
+  refused in another thread or task, the block still ends where it began. Running blocks
   are held in one context variable shared by every `Measure`, so a long-lived thread does
   not grow with the number of requests it serves.
 - `start(name, desc=None)` returns a `Timer`; `stop()` records it and returns the metric,
   and a second `stop()` raises `RuntimeError`. `running` says whether it is still going.
 - A clock reading that makes a duration infinite, NaN or too large for a float (an `int`
-  reading such as `10**400`) raises `ServerTimingError` where
-  the block, the call or the timer ends, and nothing is recorded for it, so the other
-  metrics still build.
+  reading such as `10**400`) raises `ServerTimingError` where the block, the call or the
+  timer ends, and nothing is recorded for it, so the other metrics still build.
 - `Measure(timing, name, desc)` and `Timer(timing, name, desc, start)` can be built
   directly; they check `timing`, the name and the description as the methods do, and
   `start` must be an `int` or a `float` from the timing's clock.
