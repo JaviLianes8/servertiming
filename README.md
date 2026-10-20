@@ -58,9 +58,10 @@ print(build([Metric("db", dur=12.3456)], precision=1))
 # db;dur=12.3
 ```
 
-Parse a header value the way the W3C specification says a browser must. Malformed text
-never raises (only a value that is not a `str` does): the parser keeps every metric it
-can and skips what the spec says to ignore. `dur` and `desc` are `None` when absent;
+Parse a header value the way browsers read it, as the web-platform-tests corpus pins it
+down. Malformed text never raises (only a value that is not a `str` does): the parser
+keeps every metric it can and skips what the corpus skips. `dur` and `desc` are `None`
+when absent;
 `duration` and `description` give the values a browser shows (`0` and `""`):
 
 ```python
@@ -132,7 +133,8 @@ print(timing.header())
 ```
 
 Names and descriptions are checked when recorded, so a bad one fails where it is written,
-not when the response goes out. Recording is safe from several threads.
+not when the response goes out. Recording is safe from several threads, and a `with`
+block must end in the thread or task that started it.
 
 ## Command line
 
@@ -140,7 +142,10 @@ not when the response goes out. Recording is safe from several threads.
 breaks the grammar (2 when there is no value). With no arguments it reads stdin, one value
 per line. When stdin holds response headers it uses only the `Server-Timing` fields
 (folded continuation lines included) and ignores the rest, so a response without the
-header exits with 2. `python -m timingheader` does the same:
+header exits with 2. When it holds several responses, as `curl -sIL` prints redirects, only
+the last one is read, the response a browser exposes. `--json` escapes every character
+outside ASCII, so the output is valid JSON on any console. `python -m timingheader` does
+the same:
 
 ```
 $ curl -sI https://example.com/ | timingheader
@@ -163,8 +168,8 @@ $ timingheader --json 'db;desc=d1 d2'
 | `Timer` | Returned by `Timing.start`: `stop()` records the metric, `running`. |
 | `ServerTimingError` | `ValueError` with `position` and `field` for strict parsing errors. |
 
-The [guide](https://github.com/JaviLianes8/timingheader/blob/main/GUIDE.md) describes every
-rule in detail; the [changelog](https://github.com/JaviLianes8/timingheader/blob/main/CHANGELOG.md)
+The [guide](https://github.com/JaviLianes8/servertiming/blob/main/GUIDE.md) describes every
+rule in detail; the [changelog](https://github.com/JaviLianes8/servertiming/blob/main/CHANGELOG.md)
 lists what changed.
 
 ## Standards and browsers
@@ -186,10 +191,13 @@ The lenient parser passes the 85 cases of the web-platform-tests corpus. Real br
 were checked too, by sending the headers to them over HTTP: Chrome 155, Firefox 158 and
 WebKit expose exactly what `parse` gives for thousands of generated headers that follow
 the grammar, and Chrome and Firefox for the whole corpus. On malformed text the browsers
-disagree with one another and with the spec (Chrome and WebKit stop at an empty list
-element, Chrome and Firefox read `12ms` as no duration); `parse` follows the spec there.
-The [guide](https://github.com/JaviLianes8/timingheader/blob/main/GUIDE.md#browsers)
-lists every difference measured.
+disagree with one another (Chrome and WebKit stop at an empty list element, Chrome and
+Firefox read `12ms` as no duration); `parse` follows the corpus and the HTML number rules
+there. The Editor's Draft of the W3C specification also gives a step-by-step parsing
+algorithm that reads some malformed values differently from the corpus (it takes all the
+text up to the first `;` as the name, so `a=1` is a name); where the two conflict, `parse`
+follows the corpus. The [guide](https://github.com/JaviLianes8/servertiming/blob/main/GUIDE.md#browsers)
+lists every difference measured, and those from the algorithm.
 
 ## Why
 
@@ -212,7 +220,7 @@ against real browsers.
 
 ## License
 
-MIT. See [LICENSE](https://github.com/JaviLianes8/timingheader/blob/main/LICENSE).
+MIT. See [LICENSE](https://github.com/JaviLianes8/servertiming/blob/main/LICENSE).
 
 ## Links
 

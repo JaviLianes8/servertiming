@@ -31,7 +31,7 @@ ENGINES = os.environ.get("TIMINGHEADER_BROWSER_ENGINES", "chrome,webkit,firefox"
 CASES = int(os.environ.get("TIMINGHEADER_BROWSER_CASES", "3000"))
 
 # What each engine exposed for these field values (recorded output, see the docstring).
-# "ours" is what parse gives: the W3C algorithm as the web-platform-tests corpus reads it.
+# "ours" is what parse gives: the web-platform-tests corpus reading.
 _A, _B = ("a", 0.0, ""), ("b", 0.0, "")
 DIFFERENCES: dict[str, dict[str, list[tuple[str, float, str]]]] = {
     "a,,b": {"chrome": [_A], "webkit": [_A], "firefox": [_A, _B], "ours": [_A, _B]},

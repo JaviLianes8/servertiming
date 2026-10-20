@@ -7,7 +7,7 @@ from collections.abc import Iterable
 from ._errors import shown
 from ._metric import Metric
 from ._number import parse_number
-from ._syntax import OWS, TCHARS
+from ._syntax import OWS, TCHARS, plain
 
 
 def field_list(value: str | Iterable[str]) -> list[str]:
@@ -18,11 +18,11 @@ def field_list(value: str | Iterable[str]) -> list[str]:
     for field in fields:
         if not isinstance(field, str):
             raise TypeError(f"field values must be str, got {shown(field)}")
-    return fields
+    return [plain(field) for field in fields]
 
 
 def parse_lenient(fields: list[str]) -> list[Metric]:
-    """Tokenize the field values, skipping what the spec says to ignore.
+    """Tokenize the field values, skipping what the corpus and the spec prose ignore.
 
     Repeated fields are joined with ``", "`` first, as Fetch does before parsing.
     """

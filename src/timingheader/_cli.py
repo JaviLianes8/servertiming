@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import argparse
+import errno
 import json
+import os
 import re
 import sys
 from collections.abc import Sequence
@@ -27,20 +29,26 @@ def main(argv: Sequence[str] | None = None, stdin: TextIO | None = None) -> int:
         prog="timingheader",
         description="Show the metrics in Server-Timing values and check them against the "
         "grammar. With no VALUE, lines are read from stdin; given response headers (as "
-        "from curl -sI), only the Server-Timing fields are used.",
+        "from curl -sI), only the Server-Timing fields of the last response are used.",
     )
     parser.add_argument("values", nargs="*", metavar="VALUE", help="a Server-Timing value")
     parser.add_argument("--json", action="store_true", help="print the metrics as JSON")
     args = parser.parse_args(argv)
-    fields = [v for v in args.values if v.strip(_OWS)] if args.values else _read(stdin)
-    if not fields:
+    if args.values:
+        # Blank arguments are dropped, but a value keeps its number on the command line.
+        given = [(n, v) for n, v in enumerate(args.values, 1) if v.strip(_OWS)]
+    else:
+        given = list(enumerate(_read(stdin), 1))
+    if not given:
         print("no Server-Timing value given", file=sys.stderr)
         return 2
+    fields = [value for _, value in given]
     metrics = parse_lenient(fields)
     _write(_as_json(metrics) if args.json else _as_table(metrics))
     errors = _errors(fields)
     for error in errors:
-        print(f"invalid value {(error.field or 0) + 1}: {error.message}", file=sys.stderr)
+        number = given[error.field or 0][0]
+        print(f"invalid value {number}: {error.message}", file=sys.stderr)
     return 1 if errors else 0
 
 
@@ -52,13 +60,20 @@ def _read(stdin: TextIO | None) -> list[str]:
 
 
 def fields_from_lines(lines: Sequence[str]) -> list[str]:
-    """Bare values one per line, or the Server-Timing fields of a header block."""
+    """Bare values one per line, or the Server-Timing fields of a header block.
+
+    A block holding several responses (redirects followed, interim responses) gives the
+    fields of the last one only, the response a browser exposes.
+    """
     if not any(_HEADER_LINE.match(line) for line in lines):
         return [line.strip(_OWS) for line in lines if line.strip(_OWS)]
     # Each field is kept as its parts and joined once, so many folded lines stay linear.
     fields: list[list[str]] = []
     inside = False
     for line in lines:
+        if line.startswith("HTTP/"):
+            fields, inside = [], False
+            continue
         if inside and line[:1] in (" ", "\t"):
             # An obsolete folded line continues the field above it (RFC 9112 5.2).
             fields[-1].append(line.strip(_OWS))
@@ -83,14 +98,33 @@ def _errors(fields: list[str]) -> list[ServerTimingError]:
 def _write(text: str) -> None:
     # A console or pipe that cannot show a character gets an escape, not a traceback.
     encoding = sys.stdout.encoding or "utf-8"
-    sys.stdout.write(text.encode(encoding, "backslashreplace").decode(encoding) + "\n")
+    try:
+        sys.stdout.write(text.encode(encoding, "backslashreplace").decode(encoding) + "\n")
+        sys.stdout.flush()
+    except OSError as error:
+        # A reader that stops early (| head) is not an error in the values: stop writing
+        # and let the exit status still say whether they are valid.
+        if not isinstance(error, BrokenPipeError) and error.errno != errno.EINVAL:
+            raise
+        _discard_stdout()
+
+
+def _discard_stdout() -> None:
+    # Python flushes stdout again at exit; pointing it at the null device keeps that quiet.
+    try:
+        devnull = os.open(os.devnull, os.O_WRONLY)
+        os.dup2(devnull, sys.stdout.fileno())
+        os.close(devnull)
+    except (OSError, ValueError):
+        sys.stdout = open(os.devnull, "w")  # noqa: SIM115
 
 
 def _as_json(metrics: list[Metric]) -> str:
     rows = [
         {"name": m.name, "dur": m.dur, "desc": m.desc, "params": dict(m.params)} for m in metrics
     ]
-    return json.dumps(rows, indent=2, ensure_ascii=False)
+    # ASCII escapes keep the JSON valid on any stdout, whatever characters it can encode.
+    return json.dumps(rows, indent=2, ensure_ascii=True)
 
 
 def _as_table(metrics: list[Metric]) -> str:

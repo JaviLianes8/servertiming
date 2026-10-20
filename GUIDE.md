@@ -10,8 +10,10 @@ headers first and trailers after, and returns a list of `Metric`. Several values
 joined with `", "` before they are read, as the Fetch standard does. A value that is not
 a `str` raises `TypeError`; decode header bytes as ISO-8859-1 first.
 
-**Default: the W3C algorithm, as the web-platform-tests corpus reads it.** It never
-raises on text.
+**Default: what browsers read, as the web-platform-tests corpus pins it down.** It
+never raises on text. It follows the corpus and the rules in the prose of the W3C spec;
+where the step-by-step algorithm of the spec's Editor's Draft disagrees with the corpus,
+the corpus wins (see [the Editor's Draft algorithm](#the-editors-draft-algorithm)).
 
 - A metric name is a token (RFC 9110 5.6.2). An entry that does not start with one
   (`[x]`, `"q"`, an empty list element) is skipped up to the next comma.
@@ -23,6 +25,8 @@ raises on text.
   empty.
 - `dur` is read with the HTML rules for floating-point numbers (below); `desc` is kept as
   read. Any other parameter is kept, in order, in `Metric.params`.
+- Values are checked as plain `str` text: a `str` subclass is read, and written by
+  `build`, as its real characters, whatever its own iteration or formatting shows.
 
 ```python
 from timingheader import parse
@@ -129,9 +133,18 @@ the metrics finished, and `header(precision=None)` builds them.
   nested, or from several threads and asyncio tasks at once, and each entry records its
   own metric. As a decorator it times every call of a plain function, or every run of an
   `async` function up to its return. A generator function or an object that is not
-  callable raises `TypeError`.
+  callable raises `TypeError`. A block must end in the thread or asyncio task that
+  entered it: an exit with no matching entry there raises `RuntimeError`. Running blocks
+  are held in one context variable shared by every `Measure`, so a long-lived thread does
+  not grow with the number of requests it serves.
 - `start(name, desc=None)` returns a `Timer`; `stop()` records it and returns the metric,
   and a second `stop()` raises `RuntimeError`. `running` says whether it is still going.
+- A clock reading that makes a duration infinite or NaN raises `ServerTimingError` where
+  the block, the call or the timer ends, and nothing is recorded for it, so the other
+  metrics still build.
+- `Measure(timing, name, desc)` and `Timer(timing, name, desc, start)` can be built
+  directly; they check `timing`, the name and the description as the methods do, and
+  `start` must be an `int` or a `float` from the timing's clock.
 
 ```python
 import asyncio
@@ -168,9 +181,15 @@ the offending value, so a huge or hostile input never comes back whole.
 `timingheader [--json] [VALUE ...]` prints the metrics of the values (a table, or JSON with
 `name`, `dur`, `desc` and `params`), then checks each value in strict mode and prints one
 line per invalid value on stderr. Exit status: 0 when every value is valid, 1 when one is
-not, 2 when there is no value. With no argument it reads stdin as ISO-8859-1: bare values
-one per line, or, when a line looks like a status line or a header (`HTTP/...`,
-`Name:`), only the `Server-Timing` fields, folded continuation lines included.
+not, 2 when there is no value; blank arguments are dropped, and an invalid value is
+numbered by its place on the command line. With no argument it reads stdin as
+ISO-8859-1: bare values one per line, or, when a line looks like a status line or a
+header (`HTTP/...`, `Name:`), only the `Server-Timing` fields, folded continuation lines
+included. A status line starts a new response, and only the fields of the last response
+are used (`curl -sIL` prints every redirect), as a browser exposes only the final
+response. `--json` escapes every character outside ASCII (`"caf\u00e9"`), so the output
+stays valid JSON on any console. A reader that closes the output early (`| head`) ends
+the output quietly; the exit status still says whether the values are valid.
 
 ## Browsers
 
@@ -178,7 +197,8 @@ Real engines were driven over HTTP on 2026-10-20 (`tests/test_browsers.py`): Goo
 Chrome 155, Firefox 158 and the WebKit build of Playwright 1.64. On 3,000 generated
 headers that follow the grammar, each engine exposed exactly what `parse` gives, and
 Chrome and Firefox read the whole web-platform-tests corpus as `parse` does. On malformed
-text they differ from one another and from the spec; `parse` follows the spec:
+text they differ from one another; `parse` follows the web-platform-tests corpus and
+the HTML number rules:
 
 | Value | `parse` | Chrome | WebKit | Firefox |
 | --- | --- | --- | --- | --- |
@@ -195,3 +215,22 @@ Also: WebKit exposes only the last of several `Server-Timing` fields in one resp
 misreads two corpus cases (`metric==   ""foo;dur=123.4` and `metric1==   ""foo,metric2`),
 and Firefox decodes characters U+0080 to U+00FF in a value as UTF-8 (so `café` shows a
 replacement character) where the others, and `parse`, read them as ISO-8859-1.
+
+## The Editor's Draft algorithm
+
+The W3C Editor's Draft (`index.bs` at commit 573ee35, read on 2026-10-20) defines "parse a
+server-timing header field", run on each element after Fetch splits the value on commas
+outside quotes. It differs from the web-platform-tests corpus, and so from `parse`, on
+malformed values (35 of the 85 corpus cases):
+
+- The name is all the text up to the first `;`, not a token: `a=1, b` gives the names
+  `a=1` and `b`, and `[x], b` gives `[x]` and `b`. `parse` gives `a`, `b` and `b`.
+- Parameter names are compared with their case: `a;Dur=5` has no `dur`, so its duration
+  is 0. `parse` gives 5.
+- An unquoted value runs to the next `;` and keeps its spaces: `cache;desc=d1 d2` gives
+  `d1 d2`. `parse` gives `d1`.
+- An empty parameter before `dur` turns it into a parameter named `;dur`: `a;;dur=1` has
+  duration 0 (Chrome and WebKit agree). `parse` gives 1, as Firefox does.
+
+Where they conflict, `parse` follows the corpus, which the browsers were measured to share
+on every value that follows the grammar.

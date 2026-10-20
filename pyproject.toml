@@ -38,9 +38,9 @@ timingheader = "timingheader._cli:main"
 
 [project.urls]
 Homepage = "https://lianes8studio.com"
-Source = "https://github.com/JaviLianes8/timingheader"
-Issues = "https://github.com/JaviLianes8/timingheader/issues"
-Changelog = "https://github.com/JaviLianes8/timingheader/blob/main/CHANGELOG.md"
+Source = "https://github.com/JaviLianes8/servertiming"
+Issues = "https://github.com/JaviLianes8/servertiming/issues"
+Changelog = "https://github.com/JaviLianes8/servertiming/blob/main/CHANGELOG.md"
 LinkedIn = "https://www.linkedin.com/in/jlianes/"
 Funding = "https://buymeacoffee.com/jlianesglrs"
 
@@ -62,6 +62,11 @@ select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
 python_version = "3.10"
 strict = true
 mypy_path = "src"
+
+[[tool.mypy.overrides]]
+# The browser check needs playwright, which the dev extra does not install on purpose.
+module = ["playwright", "playwright.*"]
+ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 testpaths = ["src", "tests"]

@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import math
 import threading
 import time
 from collections.abc import Callable
 
 from ._build import build, render
+from ._errors import ServerTimingError, shown
 from ._measure import Measure, Timer
 from ._metric import Metric
 
@@ -19,7 +21,8 @@ class Timing:
     Names and descriptions are checked when recorded, so a bad one fails at the call
     site instead of when the header is rendered: ``ServerTimingError`` for a value that
     cannot be sent, ``TypeError`` for one of the wrong type. Recording is safe from
-    several threads.
+    several threads. A clock reading that makes a duration infinite or NaN raises
+    ``ServerTimingError`` where the measurement ends, and nothing is recorded for it.
 
     >>> import itertools
     >>> from timingheader import Timing
@@ -69,7 +72,6 @@ class Timing:
         >>> render(), timing.header()
         ('<html>', 'render;dur=2')
         """
-        render(Metric(name=name, dur=0.0, desc=desc))
         return Measure(self, name, desc)
 
     def start(self, name: str, desc: str | None = None) -> Timer:
@@ -82,7 +84,6 @@ class Timing:
         >>> timing.start("upload").stop()
         Metric(name='upload', dur=500.0, desc=None, params=())
         """
-        render(Metric(name=name, dur=0.0, desc=desc))
         return Timer(self, name, desc, self._clock())
 
     @property
@@ -112,7 +113,11 @@ class Timing:
         return build(self.metrics, precision=precision)
 
     def _finish(self, name: str, desc: str | None, start: float) -> Metric:
-        metric = Metric(name=name, dur=(self._clock() - start) * 1000.0, desc=desc)
+        dur = (self._clock() - start) * 1000.0
+        if not math.isfinite(dur):
+            # Recorded, it would make every later header() fail and lose the other metrics.
+            raise ServerTimingError(f"the clock gave a duration that is not finite: {shown(dur)}")
+        metric = Metric(name=name, dur=dur, desc=desc)
         with self._lock:
             self._metrics.append(metric)
         return metric

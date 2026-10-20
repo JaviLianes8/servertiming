@@ -30,7 +30,9 @@ This is the first release on PyPI.
 ### Changed
 
 - The distribution, the import package and the command are named `timingheader`; the
-  project was developed as `servertiming`, a name PyPI does not accept.
+  project was developed as `servertiming`, a name PyPI does not accept. The source
+  repository is still https://github.com/JaviLianes8/servertiming, and the project links
+  point there.
 - `build`, `str(metric)` and `Timing` raise `TypeError` (they raised
   `ServerTimingError`) for an argument of the wrong type: a single `Metric` or a `str`
   instead of an iterable, an item that is not a `Metric`, a name, description or
@@ -50,9 +52,35 @@ This is the first release on PyPI.
 - Error messages quote at most a short excerpt of the value: a 100,000 character name no
   longer comes back whole, and an `int` duration too large for a float no longer raises a
   bare `ValueError` from `repr`.
-- The public classes report `timingheader` as their module, so reprs and pickles never
-  name a private module.
+- Every public name reports `timingheader` as its module (`build` and the property
+  getters too), so reprs and pickles never name a private module. The package no longer
+  exposes its internal helpers under public names: `dir(timingheader)` holds only the
+  names in `__all__`.
+- A `with timing.measure(...)` block no longer leaves a context variable behind: every
+  `Measure` shares one, so a long-lived thread (a WSGI worker, a script's main thread) no
+  longer grows by about 120 bytes per request.
+- Leaving a `Measure` block in another thread or task than the one that entered it, or
+  without entering it, raises `RuntimeError` (it raised an internal `ValueError`).
+- A clock reading that makes a duration infinite or NaN raises `ServerTimingError` where
+  the measurement ends, and nothing is recorded (it was recorded, and every later
+  `header()` failed).
+- The `Measure` and `Timer` constructors check their arguments as `Timing.measure` and
+  `Timing.start` do: a name that is not a token or a description holding a control
+  character raises `ServerTimingError`, a `timing` that is not a `Timing` or a `start`
+  that is not a number raises `TypeError`.
+- A `str` subclass is checked and written as its real characters: one whose iteration or
+  formatting hid a CR or LF could reach the header through `build`, `str(metric)` or
+  `Timing`.
 - The command reads response headers with many folded lines in linear time.
+- The command reads only the last response of a header dump that holds several (as
+  `curl -sIL` prints redirects); it joined the fields of every response.
+- `timingheader --json` escapes every character outside ASCII, so its output is valid
+  JSON whatever the console can encode (a Windows pipe produced an invalid `\x85`
+  escape).
+- An invalid value given on the command line is numbered by its place among the
+  arguments, blank ones included.
+- The command ends quietly when its reader closes the output early (`| head`), with the
+  exit status of the values, instead of printing a `BrokenPipeError` traceback.
 
 ### Added
 

@@ -21,9 +21,10 @@ def build(metrics: Iterable[Metric], *, precision: int | None = None) -> str:
     holding a character no HTTP field can carry (CR, LF, NUL and other controls), a
     duration that is not finite, or a repeated parameter. Raises ``TypeError`` for an
     argument of the wrong type: ``metrics`` a single ``Metric`` or a ``str``, an item that
-    is not a ``Metric``, or a part of a metric that is not a ``str`` (or a real number for
-    the duration). ``precision`` (an int from 0 to 20) rounds durations to that many
-    decimal places, which keeps the header short; the default keeps every digit.
+    is not a ``Metric``, or a part of a metric that is not a ``str`` (or, for the duration,
+    an ``int`` or a ``float``, not a ``bool``). ``precision`` (an int from 0 to 20) rounds
+    durations to that many decimal places, which keeps the header short; the default keeps
+    every digit.
 
     >>> from timingheader import Metric, build
     >>> build([Metric("db", dur=53.25, desc="primary"), Metric("cdn", params=(("hit", "1"),))])
@@ -63,7 +64,8 @@ def render(metric: Metric, precision: int | None = None) -> str:
         if not isinstance(pair, tuple) or len(pair) != 2:
             raise TypeError(f"params must hold (name, value) pairs, got {shown(pair)}")
         name, value = pair
-        key = ascii_lower(check_token(name, "parameter name"))
+        name = check_token(name, "parameter name")
+        key = ascii_lower(name)
         if key in _RESERVED:
             raise ServerTimingError(f"parameter {shown(name)} belongs in Metric.dur or Metric.desc")
         if key in seen:
