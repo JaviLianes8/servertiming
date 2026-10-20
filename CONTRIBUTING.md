@@ -15,9 +15,8 @@ pip install -r requirements-dev.txt
   never touch the real thing.
 - Run `scripts/check.ps1` (format, lint, types, tests) and make sure it passes.
 - `python scripts/fetch_upstream.py` downloads the web-platform-tests corpus and the
-  specifications the tests read into the
-  ignored `tests/upstream/` folder (checked against `MANIFEST.json`); without it those
-  tests skip. `TIMINGHEADER_E2E=1 pytest tests/test_e2e_wheel.py` builds the wheel,
+  specifications the tests read into the ignored `tests/upstream/` folder (checked
+  against `MANIFEST.json`); without them those tests skip. `TIMINGHEADER_E2E=1 pytest tests/test_e2e_wheel.py` builds the wheel,
   installs it in a fresh virtual environment and drives the installed package.
 - `TIMINGHEADER_BROWSERS=1 pytest tests/test_browsers.py` (with `pip install playwright`,
   `playwright install webkit`, and Chrome and Firefox installed) sends generated headers to
