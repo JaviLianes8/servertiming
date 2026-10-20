@@ -113,8 +113,10 @@ class Timing:
         return build(self.metrics, precision=precision)
 
     def _finish(self, name: str, desc: str | None, start: float) -> Metric:
+        # Read outside the guard: an OverflowError raised by the clock itself is its own error.
+        now = self._clock()
         try:
-            dur = (self._clock() - start) * 1000.0
+            dur = (now - start) * 1000.0
         except OverflowError:
             # An int reading too large for a float: as unusable as an infinite one.
             dur = math.inf

@@ -38,9 +38,9 @@ timingheader = "timingheader._cli:main"
 
 [project.urls]
 Homepage = "https://lianes8studio.com"
-Source = "https://github.com/JaviLianes8/servertiming"
-Issues = "https://github.com/JaviLianes8/servertiming/issues"
-Changelog = "https://github.com/JaviLianes8/servertiming/blob/main/CHANGELOG.md"
+Source = "https://github.com/JaviLianes8/timingheader"
+Issues = "https://github.com/JaviLianes8/timingheader/issues"
+Changelog = "https://github.com/JaviLianes8/timingheader/blob/main/CHANGELOG.md"
 LinkedIn = "https://www.linkedin.com/in/jlianes/"
 Funding = "https://buymeacoffee.com/jlianesglrs"
 

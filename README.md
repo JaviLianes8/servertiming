@@ -168,8 +168,8 @@ $ timingheader --json 'db;desc=d1 d2'
 | `Timer` | Returned by `Timing.start`: `stop()` records the metric, `running`. |
 | `ServerTimingError` | `ValueError` with `position` and `field` for strict parsing errors. |
 
-The [guide](https://github.com/JaviLianes8/servertiming/blob/main/GUIDE.md) describes every
-rule in detail; the [changelog](https://github.com/JaviLianes8/servertiming/blob/main/CHANGELOG.md)
+The [guide](https://github.com/JaviLianes8/timingheader/blob/main/GUIDE.md) describes every
+rule in detail; the [changelog](https://github.com/JaviLianes8/timingheader/blob/main/CHANGELOG.md)
 lists what changed.
 
 ## Standards and browsers
@@ -196,7 +196,7 @@ Firefox read `12ms` as no duration); `parse` follows the corpus and the HTML num
 there. The Editor's Draft of the W3C specification also gives a step-by-step parsing
 algorithm that reads some malformed values differently from the corpus (it takes all the
 text up to the first `;` as the name, so `a=1` is a name); where the two conflict, `parse`
-follows the corpus. The [guide](https://github.com/JaviLianes8/servertiming/blob/main/GUIDE.md#browsers)
+follows the corpus. The [guide](https://github.com/JaviLianes8/timingheader/blob/main/GUIDE.md#browsers)
 lists every difference measured, and those from the algorithm.
 
 ## Why
@@ -220,7 +220,7 @@ against real browsers.
 
 ## License
 
-MIT. See [LICENSE](https://github.com/JaviLianes8/servertiming/blob/main/LICENSE).
+MIT. See [LICENSE](https://github.com/JaviLianes8/timingheader/blob/main/LICENSE).
 
 ## Links
 

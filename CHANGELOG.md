@@ -29,10 +29,9 @@ This is the first release on PyPI.
 
 ### Changed
 
-- The distribution, the import package and the command are named `timingheader`; the
-  project was developed as `servertiming`, a name PyPI does not accept. The source
-  repository is still https://github.com/JaviLianes8/servertiming, and the project links
-  point there.
+- The distribution, the import package and the command are named `timingheader`, and the
+  project links point at https://github.com/JaviLianes8/timingheader.
+- Developed as `servertiming` up to 0.2.0, a name PyPI does not accept.
 - `build`, `str(metric)` and `Timing` raise `TypeError` (they raised
   `ServerTimingError`) for an argument of the wrong type: a single `Metric` or a `str`
   instead of an iterable, an item that is not a `Metric`, a name, description or
@@ -67,7 +66,8 @@ This is the first release on PyPI.
   block ends once: a second exit through a copy of its context raises `RuntimeError`.
 - A clock reading that is an `int` too large for a float raises `ServerTimingError` where
   the measurement ends, as a duration that is not finite does (it raised
-  `OverflowError`); nothing is recorded and a `Timer` keeps running.
+  `OverflowError`); nothing is recorded and a `Timer` keeps running. An exception raised
+  by the clock itself, `OverflowError` included, is not caught and reaches the caller.
 - `typing.get_type_hints` and `inspect.signature(..., eval_str=True)` resolve the
   annotations of `parse` and of the `Measure` and `Timer` constructors (they raised
   `NameError`).

@@ -14,7 +14,7 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
-REPOSITORY = "https://github.com/JaviLianes8/servertiming"
+REPOSITORY = "https://github.com/JaviLianes8/timingheader"
 BLOB = f"{REPOSITORY}/blob/main/"
 
 pytestmark = pytest.mark.skipif(

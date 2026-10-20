@@ -145,7 +145,8 @@ the metrics finished, and `header(precision=None)` builds them.
   and a second `stop()` raises `RuntimeError`. `running` says whether it is still going.
 - A clock reading that makes a duration infinite, NaN or too large for a float (an `int`
   reading such as `10**400`) raises `ServerTimingError` where the block, the call or the
-  timer ends, and nothing is recorded for it, so the other metrics still build.
+  timer ends, and nothing is recorded for it, so the other metrics still build. An
+  exception raised by the clock itself, `OverflowError` included, reaches the caller as it is.
 - `Measure(timing, name, desc)` and `Timer(timing, name, desc, start)` can be built
   directly; they check `timing`, the name and the description as the methods do, and
   `start` must be an `int` or a `float` from the timing's clock.

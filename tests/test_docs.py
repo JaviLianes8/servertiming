@@ -56,8 +56,8 @@ def test_the_readme_links_are_absolute_and_carry_the_badge() -> None:
     assert README.splitlines()[2] == BADGE
     for target in re.findall(r"\]\(([^)]+)\)", README):
         assert target.startswith("https://"), target
-    assert "https://github.com/JaviLianes8/servertiming/blob/main/GUIDE.md" in README
-    assert "https://github.com/JaviLianes8/servertiming/blob/main/CHANGELOG.md" in README
+    assert "https://github.com/JaviLianes8/timingheader/blob/main/GUIDE.md" in README
+    assert "https://github.com/JaviLianes8/timingheader/blob/main/CHANGELOG.md" in README
 
 
 def test_every_print_in_the_readme_shows_its_output() -> None:
